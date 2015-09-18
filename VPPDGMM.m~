@@ -1,0 +1,12 @@
+% Perform VPPD on a GMM
+
+m1 = [1, -1]
+m2 = [-1, 1]
+S1 = [2 0; 0 1]
+S2 = [3 0; 0 1]
+
+e1 = randn(2, 100)
+e2 = randn(2, 100)
+
+fig = scatter(m1, m2)
+axis([-2, 2, -2, 2])
