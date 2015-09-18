@@ -715,6 +715,7 @@ def transfer_subset():
             # Get model number
             i = f.replace('teacherMNISTsplit','')
             i = f.replace('.npz','')
+            print i
             i = (int(i)/5000)-1
             size.append((i+1)*5000)
             print('Model number %i' % (i,))
