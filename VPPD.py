@@ -688,11 +688,59 @@ def train_subset():
              L2Radius=3.87, base_tlr=1e-2, base_slr=1e-1, mb_size=500,
              margin_lr=25, num_hid=800)
 
+def transfer_subset():
+    '''Cycle through all subsets and log best of 5 accuracies'''
+    # Load data subsets
+    fname = '/home/daniel/Code/VPPD/models/MNISTsplit.pkl'
+    with open(fname, 'r') as fp:
+        data = cPickle.load(fp)
+    X_train, y_train, X_val, y_val, X_test, y_test = data
+    for i in np.arange(10):
+        X_train[i] = X_train[i].astype(theano.config.floatX)
+    X_val = X_val.astype(theano.config.floatX)
+    X_test = X_test.astype(theano.config.floatX)
+    for i in np.arange(10):
+        y_train[i] = y_train[i].astype(np.uint8)
+    y_val = y_val.astype(np.uint8)
+    y_test = y_test.astype(np.uint8)
+    
+    # Load models
+    dir_name = '/home/daniel/Code/VPPD/models/splits'
+    accum = [], size = []
+    for root, dirs, files in os.walk(dir_name):
+        for f in files:
+            # Specific model
+            fname = root + '/' + f
+            error = 101
+            # Get model number
+            i = f.replace('teacherMNISTsplit','')
+            i = f.replace('.npz','')
+            i = (int(i)/5000)-1
+            size.append((i+1)*5000)
+            print('Model number %i' % (i,))
+            dataset = X_train[i], y_train[i], X_val, y_val, X_test, y_test
+            for i in numpy.arange(5):
+                accry = main2(model='mlp', save_name='./models/studentMNISTv.npz',
+                              dataset=dataset, file_name = fname, num_epochs=100,
+                              L2Radius=3.87, base_tlr=1e-5, base_slr=1e0, update_W=False,
+                              mb_size=100, margin_lr=25, sampler='SGHMC',burn_in = 20,
+                              thinning_interval = 1, s_momentum=0.99, method='VPPD',
+                              num_hid=800)
+                error = np.minimum(100-accry, error)
+        accum.append(error)
+    accum = np.asarray(accum)
+    print accum
+    np.savez('./models/accumVPPDsub.npz', size=size, accum=accum)
+    
+    fig = plt.figure()
+    plt.plot(size, accum)
+    plt.show()
+
 
 if __name__ == '__main__':
-    main(model='cnn', save_name='./models/teacherMNISTCNN150.npz', dataset='MNIST',
-         num_epochs=100, L2Radius=3.87, base_tlr=1e-1, base_slr=1e-1,
-         mb_size=500, margin_lr=25, num_hid=150)
+    #main(model='cnn', save_name='./models/teacherMNISTCNN150.npz', dataset='MNIST',
+    #     num_epochs=100, L2Radius=3.87, base_tlr=1e-1, base_slr=1e-1,
+    #     mb_size=500, margin_lr=25, num_hid=150)
     #main2(model='mlp', save_name='./models/studentMNISTv.npz', dataset='MNIST',
     #      file_name = './models/teacherMNIST800.npz', num_epochs=100,
     #      L2Radius=3.87, base_tlr=1e-5, base_slr=1e0, update_W=False,
@@ -701,7 +749,7 @@ if __name__ == '__main__':
     #approximator_size(100,1200,12)
     #cycle_mlps(100,1000,10)
     #train_subset()
-    
+    transfer_subset()
     
     
     
