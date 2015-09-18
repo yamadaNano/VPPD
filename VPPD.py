@@ -720,7 +720,7 @@ def transfer_subset():
             size.append((i+1)*5000)
             print('Model number %i' % (i,))
             dataset = X_train[i], y_train[i], X_val, y_val, X_test, y_test
-            for i in numpy.arange(5):
+            for i in np.arange(5):
                 accry = main2(model='mlp', save_name='./models/studentMNISTv.npz',
                               dataset=dataset, file_name = fname, num_epochs=100,
                               L2Radius=3.87, base_tlr=1e-5, base_slr=1e0, update_W=False,
