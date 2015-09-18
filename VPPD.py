@@ -725,13 +725,13 @@ def transfer_subset():
                               dataset=dataset, file_name = fname, num_epochs=100,
                               L2Radius=3.87, base_tlr=1e-5, base_slr=1e0, update_W=False,
                               mb_size=100, margin_lr=25, sampler='SGHMC',burn_in = 20,
-                              thinning_interval = 1, s_momentum=0.99, method='VPPD',
+                              thinning_interval = 1, s_momentum=0.99, method='Dark',
                               num_hid=800)
                 error = np.minimum(100-accry, error)
         accum.append(error)
     accum = np.asarray(accum)
     print accum
-    np.savez('./models/accumVPPDsub.npz', size=size, accum=accum)
+    np.savez('./models/accumDarksub.npz', size=size, accum=accum)
     
     fig = plt.figure()
     plt.plot(size, accum)
