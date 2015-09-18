@@ -728,7 +728,7 @@ def transfer_subset():
                               thinning_interval = 1, s_momentum=0.99, method='Dark',
                               num_hid=800)
                 error = np.minimum(100-accry, error)
-        accum.append(error)
+            accum.append(error)
     accum = np.asarray(accum)
     print accum
     np.savez('./models/accumDarksub.npz', size=size, accum=accum)
