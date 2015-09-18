@@ -713,6 +713,7 @@ def transfer_subset():
             fname = root + '/' + f
             error = 101
             # Get model number
+            print i
             i = f.replace('teacherMNISTsplit','')
             i = f.replace('.npz','')
             print i
