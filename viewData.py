@@ -5,8 +5,8 @@ import numpy
 
 from matplotlib import pyplot as plt
 
-dataDark = numpy.load('./models/accumDark800.npz')
-dataVPPD = numpy.load('./models/accumVPPD800.npz')
+dataDark = numpy.load('./models/accumDarksub.npz')
+dataVPPD = numpy.load('./models/accumVPPDsub.npz')
 
 accumDark = dataDark['accum']
 sizeDark = dataDark['size']
