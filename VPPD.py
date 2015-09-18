@@ -706,7 +706,7 @@ def transfer_subset():
     
     # Load models
     dir_name = '/home/daniel/Code/VPPD/models/splits'
-    accum = [], size = []
+    accum = []; size = []
     for root, dirs, files in os.walk(dir_name):
         for f in files:
             # Specific model
