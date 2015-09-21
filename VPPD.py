@@ -441,6 +441,45 @@ def main2(model='toy', num_epochs=100, file_name=None,
     else:
         return
 
+# ############################## TEST ERROR ###################################
+def run_model(file_name, model='toy', dataset='MNIST', mb_size=500, num_hid=800,
+              **kwargs):
+    # Load the dataset
+    print("Loading data...")
+    if dataset in ('MNIST','CIFAR10','TOY'):
+        _, _, _, _, X_test, y_test = load_dataset(dataset)
+    else:
+        _, _, _, _, X_test, y_test = dataset
+    # Theano variables
+    input_var = T.tensor4('inputs')
+    target_var = T.ivector('targets')
+    # Create neural network model (depending on first command line parameter)
+    print("Building model and compiling functions...")
+    if model == 'mlp':
+        teacher = reload_mlp(file_name, input_var, temp=-1, num_hid=800)
+    else:
+        print('Model not recognised')
+        sys.exit(1)
+    # Networks
+    v_pred = lasagne.layers.get_output(teacher, deterministic=True)
+    # Loss functions
+    val_acc = T.mean(T.eq(T.argmax(v_pred, axis=1), target_var),
+                     dtype=theano.config.floatX)
+    # Compile functions
+    v_fn = theano.function([input_var, target_var], val_acc)
+
+    # Compute and print the test error:
+    test_acc = 0; test_batches = 0
+    for batch in iterate_minibatches(X_test, y_test, 500, shuffle=False):
+        inputs, targets = batch
+        acc = v_fn(inputs, targets)
+        test_acc += acc; test_batches += 1
+    print("Test accuracy:\t\t{:.2f} %".format(
+        test_acc / test_batches * 100))
+
+    print('Complete')
+    return test_acc / test_batches * 100           
+
 # ######################### SPECIAL FUNCTIONS/METHODS #########################
     
 def get_learning_rate(epoch, margin, base):
@@ -737,6 +776,51 @@ def transfer_subset():
     plt.plot(size, accum)
     plt.show()
 
+def run_models():
+    '''Perform a single pass of each model'''
+    # Load data subsets
+    fname = '/home/daniel/Code/VPPD/models/MNISTsplit.pkl'
+    with open(fname, 'r') as fp:
+        data = cPickle.load(fp)
+    X_train, y_train, X_val, y_val, X_test, y_test = data
+    for i in np.arange(10):
+        X_train[i] = X_train[i].astype(theano.config.floatX)
+    X_val = X_val.astype(theano.config.floatX)
+    X_test = X_test.astype(theano.config.floatX)
+    for i in np.arange(10):
+        y_train[i] = y_train[i].astype(np.uint8)
+    y_val = y_val.astype(np.uint8)
+    y_test = y_test.astype(np.uint8)
+    
+    # Load models
+    dir_name = '/home/daniel/Code/VPPD/models/splits'
+    accum = []; size = []
+    for root, dirs, files in os.walk(dir_name):
+        for f in files:
+            # Specific model
+            fname = root + '/' + f
+            # Get model number
+            print f
+            i = f.replace('teacherMNISTsplit','')
+            i = i.replace('.npz','')
+            i = (int(i)/5000)-1
+            size.append((i+1)*5000)
+            print('Model number %i' % (i,))
+            dataset = X_train[i], y_train[i], X_val, y_val, X_test, y_test
+            accry = run_model(fname, model='mlp', dataset=dataset, mb_size=500,
+                              num_hid=800,)
+            
+            error = 100-accry
+            accum.append(error)
+    accum = np.asarray(accum)
+    print accum
+    np.savez('./models/accumRawsub.npz', size=size, accum=accum)
+    
+    fig = plt.figure()
+    plt.plot(size, accum)
+    plt.show()
+
+
 
 if __name__ == '__main__':
     #main(model='cnn', save_name='./models/teacherMNISTCNN150.npz', dataset='MNIST',
@@ -750,7 +834,8 @@ if __name__ == '__main__':
     #approximator_size(100,1200,12)
     #cycle_mlps(100,1000,10)
     #train_subset()
-    transfer_subset()
+    #transfer_subset()
+    run_models()
     
     
     
