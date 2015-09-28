@@ -8,6 +8,7 @@ __contact__   = "d.worrall@cs.ucl.ac.uk"
 import os, sys, time
 
 import caffe
+import cv2
 import numpy
 import skimage.io as skio
 
@@ -100,32 +101,93 @@ def getLogits(srcfile, dstfolder, num_samples):
     i = 0
     start = time.time()
     pred = (0,0,0)
+    preproc = True
+    addresses, num_lines = get_metadata(srcfile)
+    dg = data_generator(addresses, num_samples, preproc=preproc)
+    for batch in threaded_gen(dg, num_cached=50):
+        i += 1
+        im, base = batch
+        sys.stdout.flush()
+        sys.stdout.write("NUM: %i/%i TIME: %d:%02d:%02d NAME: %s \r" %
+                         (i,num_lines,pred[0],pred[1],pred[2],base))
+        logits = getPreactivations(im)
+        numpy.savez_compressed(dstfolder + '/' + base, logits)
+        if i % 10 == 0:
+            t = time.time() - start
+            m, s = divmod(num_lines*(t)/i - t, 60)
+            h, m = divmod(m, 60)
+            pred = (h, m, s)
+
+# ############################## Data handling ################################
+def get_metadata(srcfile):
+    '''Get all the addresses in the file'''
     with open(srcfile, 'r') as fp:
         lines = fp.readlines()
         num_lines = len(lines)
-        for line in lines:
-            i += 1
-            line = line.rstrip('\n')
-            base = os.path.basename(line).replace('.JPEG','')
-            sys.stdout.flush()
-            sys.stdout.write("NUM: %i/%i TIME: %d:%02d:%02d NAME: %s \r" % (i,num_lines,pred[0],pred[1],pred[2],base))
-            image = skio.imread(line)
-            image = numpy.dstack((image,)*num_samples)
-            logits = getPreactivations(image)
-            numpy.savez_compressed(dstfolder + '/' + base, logits)
-            if i % 10 == 0:
-                m, s = divmod(num_lines*(time.time() - start)/i, 60)
-                h, m = divmod(m, 60)
-                pred = (h, m, s)
+    return lines, num_lines
+
+def data_generator(addresses, num_samples, preproc=False):
+    '''Get images, resize and preprocess'''
+    for line in addresses:
+        line = line.rstrip('\n')
+        base = os.path.basename(line).replace('.JPEG','')
+        image = skio.imread(line)
+        image = preprocess(image, num_samples, preproc=preproc)
+        image = numpy.dstack(image)
+        # Really need to add some kind of preprocessing
+        yield (image, base)
+
+def threaded_gen(generator, num_cached=50):
+    '''Threaded generator to multithread the data loading pipeline'''
+    import Queue
+    queue = Queue.Queue(maxsize=num_cached)
+    sentinel = object()  # guaranteed unique reference
+
+    # define producer (putting items into queue)
+    def producer():
+        for item in generator:
+            queue.put(item)
+        queue.put(sentinel)
+
+    # start producer (in a background thread)
+    import threading
+    thread = threading.Thread(target=producer)
+    thread.daemon = True
+    thread.start()
+
+    # run as consumer (read items from queue, in current thread)
+    item = queue.get()
+    while item is not sentinel:
+        yield item
+        queue.task_done()
+        item = queue.get()
+        
+# ############################ Data preprocessing #############################
+def preprocess(im, num_samples, preproc=True):
+    '''Data normalizations and augmentations'''
+    if preproc == True:
+        img = []
+        for i in numpy.arange(num_samples):
+        # Random rotations
+            angle = numpy.random.rand() * 360.
+            M = cv2.getRotationMatrix2D((im.shape[1]/2,im.shape[0]/2), angle, 1)
+            img.append(cv2.warpAffine(im, M, (im.shape[1],im.shape[0])))
+            # Random fliplr
+            if numpy.random.rand() > 0.5:
+                img[i] = img[i][:,::-1,...]
+    else:
+        img = (im,)*num_samples
+    return img
+
                 
             
 if __name__ == '__main__':
-    folder = "/media/daniel/DATA/ImageNet/ILSVRC2012_img_train"
-    writename = "/media/daniel/DATA/ImageNet/train.txt"
-    transfercategoriesname = "/media/daniel/DATA/ImageNet/transfercategories.txt"
-    transfername = "/media/daniel/DATA/ImageNet/transfer.txt"
-    categoryname = "/media/daniel/DATA/ImageNet/categories.txt"
-    dstname = "/media/daniel/DATA/ImageNet/logits"
+    folder = "/media/daniel/SAMSUNG/ImageNet/ILSVRC2012_img_train"
+    writename = "/home/daniel/Data/ImageNetTxt/train.txt"
+    transfercategoriesname = "/home/daniel/Data/ImageNetTxt/transfercategories.txt"
+    transfername = "/home/daniel/Data/ImageNetTxt/transfer.txt"
+    categoryname = "/home/daniel/Data/ImageNetTxt/categories.txt"
+    dstname = "/home/daniel/Data/AugLogits"
     #getImages(folder, writename)
     #getCategories(folder, categoryname)
     #chooseRandomCategories(categoryname, transfercategoriesname)
