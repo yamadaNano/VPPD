@@ -165,6 +165,8 @@ def threaded_gen(generator, num_cached=50):
 # ############################ Data preprocessing #############################
 def preprocess(im, num_samples, preproc=True):
     '''Data normalizations and augmentations'''
+    if im.ndim == 2:
+        im = numpy.dstack((im,)*3)
     if preproc == True:
         img = []
         for i in numpy.arange(num_samples):
@@ -187,7 +189,7 @@ if __name__ == '__main__':
     transfercategoriesname = "/home/daniel/Data/ImageNetTxt/transfercategories.txt"
     transfername = "/home/daniel/Data/ImageNetTxt/transfer.txt"
     categoryname = "/home/daniel/Data/ImageNetTxt/categories.txt"
-    dstname = "/home/daniel/Data/AugLogits"
+    dstname = "/home/daniel/Data/AugMeanLogits"
     #getImages(folder, writename)
     #getCategories(folder, categoryname)
     #chooseRandomCategories(categoryname, transfercategoriesname)
