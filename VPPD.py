@@ -213,15 +213,15 @@ def main(model='toy', num_epochs=100, file_name=None,
     if model == 'toy':
         teacher = build_toy(input_var, num_hid)
     elif model == 'mlp':
-        teacher = build_mlp(input_var, num_hid)
+        teacher = build_mlp(input_var=input_var, num_hid=num_hid)
     elif model == 'cnn':
         teacher = build_cnn(input_var, num_hid)
     else:
         print('Model not recognised')
         sys.exit(1)
     # Networks
-    t_pred = lasagne.layers.get_output(teacher, deterministic=False)
-    v_pred = lasagne.layers.get_output(teacher, deterministic=True)
+    t_pred = lasagne.layers.get_output(teacher, deterministic=False, training=False)
+    v_pred = lasagne.layers.get_output(teacher, deterministic=True, training=False)
     # Loss functions
     t_loss = lasagne.objectives.categorical_crossentropy(t_pred, target_var)
     t_loss = t_loss.mean()
@@ -823,9 +823,9 @@ def run_models():
 
 
 if __name__ == '__main__':
-    #main(model='cnn', save_name='./models/teacherMNISTCNN150.npz', dataset='MNIST',
-    #     num_epochs=100, L2Radius=3.87, base_tlr=1e-1, base_slr=1e-1,
-    #     mb_size=500, margin_lr=25, num_hid=150)
+    main(model='mlp', save_name='./models/RNmlp.npz', dataset='MNIST',
+         num_epochs=100, L2Radius=3.87, base_tlr=1e-1, base_slr=1e-1,
+         mb_size=500, margin_lr=25, num_hid=800)
     #main2(model='mlp', save_name='./models/studentMNISTv.npz', dataset='MNIST',
     #      file_name = './models/teacherMNIST800.npz', num_epochs=100,
     #      L2Radius=3.87, base_tlr=1e-5, base_slr=1e0, update_W=False,
@@ -835,7 +835,7 @@ if __name__ == '__main__':
     #cycle_mlps(100,1000,10)
     #train_subset()
     #transfer_subset()
-    run_models()
+    #run_models()
     
     
     

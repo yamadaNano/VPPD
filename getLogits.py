@@ -10,7 +10,8 @@ import os, sys, time
 import caffe
 import cv2
 import numpy
-import skimage.io as skio
+
+from matplotlib import pyplot as plt
 
 caffe_root = '/home/daniel/Code/caffe/'
 
@@ -21,7 +22,7 @@ if not os.path.isfile(caffe_root + 'models/bvlc_reference_caffenet/bvlc_referenc
 
 '''Initialise network'''
 caffe.set_mode_gpu()
-net = caffe.Net(caffe_root + 'models/bvlc_reference_caffenet/test_dropout.prototxt',
+net = caffe.Net(caffe_root + 'models/bvlc_reference_caffenet/test_dropout2.prototxt',
         caffe_root + 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel',
         caffe.TEST)
 
@@ -34,9 +35,7 @@ transformer.set_channel_swap('data', (2,1,0))  # the reference model has channel
     
 def getPreactivations(image):
     '''Get feature maps'''
-    #print image.shape
     net.blobs['data'].data[...] = transformer.preprocess('data', image)
-    #print net.blobs['data'].data[...].shape
     net.forward()
     s = net.blobs['fc8'].data
     return s
@@ -131,7 +130,7 @@ def data_generator(addresses, num_samples, preproc=False):
     for line in addresses:
         line = line.rstrip('\n')
         base = os.path.basename(line).replace('.JPEG','')
-        image = skio.imread(line)
+        image = caffe.io.load_image(line)
         image = preprocess(image, num_samples, preproc=preproc)
         image = numpy.dstack(image)
         # Really need to add some kind of preprocessing
@@ -165,8 +164,6 @@ def threaded_gen(generator, num_cached=50):
 # ############################ Data preprocessing #############################
 def preprocess(im, num_samples, preproc=True):
     '''Data normalizations and augmentations'''
-    if im.ndim == 2:
-        im = numpy.dstack((im,)*3)
     if preproc == True:
         img = []
         for i in numpy.arange(num_samples):
@@ -189,13 +186,22 @@ if __name__ == '__main__':
     transfercategoriesname = "/home/daniel/Data/ImageNetTxt/transfercategories.txt"
     transfername = "/home/daniel/Data/ImageNetTxt/transfer.txt"
     categoryname = "/home/daniel/Data/ImageNetTxt/categories.txt"
-    dstname = "/home/daniel/Data/AugMeanLogits"
+    dstname = "/home/daniel/Data/AugLogits"
     #getImages(folder, writename)
     #getCategories(folder, categoryname)
     #chooseRandomCategories(categoryname, transfercategoriesname)
     #getImagesFromCategories(transfercategoriesname, transfername)
-    print getLogits(transfername, dstname, 25)
-    
+    getLogits(transfername, dstname, 25)
+    #im = caffe.io.load_image(caffe_root + 'examples/images/cat.jpg')
+    #print im.shape, im.dtype, numpy.amin(im), numpy.amax(im)
+    #im = skio.imread(caffe_root + 'examples/images/cat.jpg')/255.
+    #fig = plt.figure()
+    #plt.imshow(im)
+    #plt.show()
+    #print im.shape, im.dtype, numpy.amin(im), numpy.amax(im)
+    #net.blobs['data'].data[...] = transformer.preprocess('data', im)
+    #out = net.forward()
+    #print("Predicted class is #{}.".format(out['prob'].argmax()))
     
     
     

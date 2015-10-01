@@ -35,21 +35,57 @@ def ipca(srcfile, logitfolder, dstfolder):
         mean = iMean(i, zeroShift(logits), mean)
         sys.stdout.write('%i \r' % (i,))
         sys.stdout.flush()
-    numpy.save(dstfolder + '/MeanLogitsZSMean.npy', mean)
+    numpy.save(dstfolder + '/AugLogitsMean.npy', mean)
     lines, num_lines = get_metadata(srcfile)
     cov = numpy.zeros((1000,1000))
     for i, line in enumerate(lines):
         base = os.path.basename(line).rstrip('\n').split('.')[0]
         fname = logitfolder + '/' + base + '.npz'
-        logits = numpy.load(fname)['arr_0'] - mean
-        cov = iCov(i, zeroShift(logits).T, cov)
+        logits = zeroShift(numpy.load(fname)['arr_0']) - mean
+        cov = iCov(i, logits.T, cov)
         sys.stdout.write('%i \r' % (i,))
         sys.stdout.flush()
-    numpy.save(dstfolder + '/MeanLogitsZSCov.npy', cov)
+    numpy.save(dstfolder + '/AugLogitsCov.npy', cov)
     _, s, _ = numpy.linalg.svd(cov)
     fig = plt.figure()
     plt.plot(s)
     plt.show()
+
+def consensus(srcfile, categories, synset, logitfolder):
+    '''Look at how the logits vote on categories'''
+    # Read line files
+    lines, num_lines = get_metadata(srcfile)
+    with open(categories, 'r') as cp:
+        cat = cp.readlines()
+    histogram = {}
+    with open(synset, 'r') as sp:
+        syn = sp.readlines()
+    syndict = {}
+    for i, s in enumerate(syn):
+        s = s.rstrip('\n')
+        syndict[s] = i
+    for label in cat:
+        label = os.path.basename(label).rstrip('\n')
+        histogram[label] = numpy.zeros((1000,))
+    # Read in logits and accumulate argmax votes
+    for i, line in enumerate(lines):
+        base = os.path.basename(line).rstrip('\n').split('.')[0]
+        fname = logitfolder + '/' + base + '.npz'
+        category = base.split('_')[0]
+        logits = numpy.load(fname)['arr_0']
+        votes = numpy.argmax(logits, axis=1)
+        numpy.add.at(histogram[category], votes, 1) 
+        sys.stdout.write('%s, %i \r' % (category, i,))
+        sys.stdout.flush()
+    print histogram.keys()
+    for label in cat:
+        label = os.path.basename(label).rstrip('\n')
+        print syndict[label], numpy.argmax(histogram[label])
+        fig = plt.figure(figsize=(20,10))
+        plt.scatter(syndict[label],0, color='red')
+        plt.bar(numpy.arange(1000), histogram[label])
+        plt.show()
+    
 
 def get_metadata(srcfile):
     '''Get all the addresses in the file'''
@@ -77,24 +113,25 @@ def iMean(i, X, mean):
 
 def iCov(i, X, cov):
     '''Incremental covariance'''
-    return (i*cov + numpy.cov(X))/(i+1.)
+    C = numpy.dot(X,X.T)/X.shape[1]
+    return (i*cov + C)/(i+1.)
 
 def plotSvd(srcfile):
     '''Plot the singular value spectrum of the covariance matrix in srcfile'''
     C = numpy.load(srcfile)
-    #_, s, _ = numpy.linalg.svd(C)
+    _, s, _ = numpy.linalg.svd(C)
     #s = numpy.sort(numpy.diag(C))[::-1]
     fig = plt.figure()
     #plt.imshow(C)
-    plt.imshow(orderedCov(C))
-    #plt.plot(s)
+    #plt.imshow(orderedCov(C))
+    plt.plot(numpy.log(s))
     plt.show()
 
 def plotMean(srcfile):
     '''Plot the mean outputs'''
     m = numpy.load(srcfile)
     fig = plt.figure()
-    plt.plot(numpy.sort(m))
+    plt.bar(numpy.arange(m.shape[0]),m) #numpy.sort(m))
     plt.show()
 
 def softmax(x):
@@ -116,15 +153,17 @@ def orderedCov(C):
 
 if __name__ == '__main__':
     srcfile = '/home/daniel/Data/ImageNetTxt/transfer.txt'
-    logitfolder = '/home/daniel/Data/MeanLogits'
-    logitsCov = '/home/daniel/Data/MeanLogitsZSCov.npy'
-    logitsMean = '/home/daniel/Data/MeanLogitsZSMean.npy'
-    dstfolder = '/home/daniel/Data'
-    main(srcfile, logitfolder)
+    logitfolder = '/home/daniel/Data/AugLogits'
+    logitsCov = '/home/daniel/Data/LogitMoments/AugMeanLogitsCov.npy'
+    logitsMean = '/home/daniel/Data/LogitMoments/softmaxMean.npy'
+    dstfolder = '/home/daniel/Data/LogitMoments'
+    categories = '/home/daniel/Data/ImageNetTxt/transfercategories.txt'
+    synset = '/home/daniel/Data/ImageNetTxt/synsets.txt'
+    #main(srcfile, logitfolder)
     #ipca(srcfile, logitfolder, dstfolder)
     #plotSvd(logitsCov)
     #plotMean(logitsMean)
-    
+    consensus(srcfile, categories, synset, logitfolder)
     
     
     
