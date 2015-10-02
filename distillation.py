@@ -20,7 +20,7 @@ import lasagne
 from matplotlib import pyplot as plt
 # ##################### Build the neural network model #######################
 
-def build_cnn(im_shape, k, input_var=None):
+def build_cnn(im_shape, temp, input_var=None):
     network = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
                                         input_var=input_var)
     network = lasagne.layers.Conv2DLayer(
@@ -52,7 +52,7 @@ def build_cnn(im_shape, k, input_var=None):
     network = lasagne.layers.DenseLayer(network, num_units=1000,
             W=lasagne.init.GlorotUniform(),
             nonlinearity=lasagne.nonlinearities.linear)
-    network = SoftermaxNonlinearity(network, k)
+    network = DistillationNonlinearity(network, temp)
     return network
 
 # ############################## Main program ################################
@@ -61,7 +61,7 @@ def build_cnn(im_shape, k, input_var=None):
 # easier to read.
 
 def main(train_file, logit_folder, val_file, savename, num_epochs=500,
-         margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None):
+         margin=25, base=0.01, mb_size=50, momentum=0.9, temp=1, synsets=None):
     print("Loading data...")
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
@@ -69,16 +69,14 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     input_var = T.tensor4('inputs')
     soft_target = T.fmatrix('soft_target')
     hard_target = T.ivector('hard_target')
-    temp_var = T.fvector('temp')
     learning_rate = T.fscalar('learning_rate')
     im_shape = (227, 227)
-    k = 5.55     # 1000 classes
     print("Building model and compiling functions...")
-    network = build_cnn(im_shape, k, input_var=input_var)
+    network = build_cnn(im_shape, temp, input_var=input_var)
     # Losses and updates
     soft_prediction = lasagne.layers.get_output(network, training=True)
     hard_prediction = lasagne.layers.get_output(network, training=False)
-    loss = -temp_var*T.sum(soft_target*T.log(soft_prediction), axis=1)
+    loss = -(temp**2)*T.sum(soft_target*T.log(soft_prediction), axis=1)
     loss += lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
     loss = loss.mean()
     params = lasagne.layers.get_all_params(network)
@@ -89,7 +87,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
                       dtype=theano.config.floatX)
     # Theano functions
     train_fn = theano.function(
-        [input_var, soft_target, hard_target, temp_var, learning_rate],
+        [input_var, soft_target, hard_target, learning_rate],
         loss, updates=updates)
     val_fn = theano.function([input_var, hard_target], test_acc)
     print("Starting training...")
@@ -99,12 +97,12 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
         # In each epoch, we do a full pass over the training data:
         learning_rate = get_learning_rate(epoch, margin, base)
         train_err = 0; train_batches = 0; running_error = []
-        trdlg = data_logit_label_generator(tr_addresses, logit_folder, im_shape,
-                                           mb_size, k=k, preproc=True,
-                                           shuffle=True, synsets=synsets)
+        trdlg = distillation_generator(tr_addresses, logit_folder, im_shape,
+                                       mb_size, temp=temp, preproc=True,
+                                       shuffle=True, synsets=synsets)
         for batch in threaded_gen(trdlg, num_cached=500):
-            inputs, soft, hard, temp = batch
-            local_train_err = train_fn(inputs, soft, hard, temp, learning_rate)
+            inputs, soft, hard = batch
+            local_train_err = train_fn(inputs, soft, hard, learning_rate)
             train_err += local_train_err
             train_batches += 1
             running_error.append(local_train_err)
@@ -173,6 +171,20 @@ def softerMax(logits, k):
     R = np.max(logits, axis=1) - np.min(logits, axis=1)
     arg = k*logits/np.maximum(R,0.1)[:,np.newaxis]
     return np.exp(arg)/np.sum(np.exp(arg), axis=1)[:,np.newaxis]
+
+class DistillationNonlinearity(lasagne.layers.Layer):
+    def __init__(self, incoming, temp, **kwargs):
+        super(DistillationNonlinearity, self).__init__(incoming, **kwargs)
+        self.temp = temp
+
+    def get_output_for(self, input, training=False, **kwargs):
+        if training:
+            input = input/self.temp
+        return T.exp(input)/T.sum(T.exp(input), axis=1).dimshuffle(0,'x')
+
+def distill(logits, temp):
+    '''Return the distilled softmax function'''
+    return np.exp(logits/temp)/np.sum(np.exp(logits/temp), axis=1)[:,np.newaxis]
 
 # ############################## Data handling ################################
 def get_metadata(srcfile):
@@ -251,18 +263,40 @@ def data_logit_label_generator(addresses, logit_folder, im_shape, mb_size,
         temp = np.hstack(temp).astype(np.float32)
         yield (im, soft_targets, hard_targets, temp)
 
+def distillation_generator(addresses, logit_folder, im_shape, mb_size,
+                           temp=1, preproc=False, shuffle=True, synsets=None):
+    '''Get images and pair up with logits'''
+    pairs = get_synsets(synsets)
+    order = ordering(len(addresses), shuffle) 
+    batches = np.array_split(order, np.ceil(len(addresses)/(1.*mb_size)))
+    for batch in batches:
+        images = []; soft = []; hard = [];  
+        for idx in batch:
+            # Load image
+            line = addresses[idx].rstrip('\n')
+            images.append(load_image(line, im_shape, preproc))
+            # Load logits
+            base = os.path.basename(line).replace('.JPEG','.npz')
+            target = load_distil(base, logit_folder, temp)
+            soft.append(target)
+            hard.append(pairs[base.split('_')[0]])
+        im = np.dstack(images)
+        im = np.transpose(im, (2,1,0)).reshape(-1,3,im_shape[0],im_shape[1])
+        soft_targets = np.vstack(soft).astype(np.float32)
+        hard_targets = np.hstack(hard).astype(np.int32)
+        yield (im, soft_targets, hard_targets)
+        
 def load_image(address, im_shape, preproc=False):
     '''Return image in appropriate format'''
     image = cv2.resize(caffe_load_image(address), im_shape)
     return preprocess(image, 1, preproc=preproc)
 
-def load_target(base, logit_folder, k):
+def load_distil(base, logit_folder, temp):
     '''Return the target in appropriate format''' 
     logit_address = logit_folder + '/' + base
     logits = np.load(logit_address)['arr_0']
-    soft_target = np.mean(softerMax(logits, k), axis=0)
-    T = np.amax(soft_target) - np.amin(soft_target)
-    return (soft_target[np.newaxis,:], T)
+    soft_target = np.mean(distill(logits, temp), axis=0)
+    return soft_target[np.newaxis,:]
 
 def ordering(num, shuffle=False):
     '''Return a possible random ordering'''
@@ -340,8 +374,8 @@ if __name__ == '__main__':
     main('/home/daniel/Data/ImageNetTxt/transfer.txt',
          '/home/daniel/Data/LogitsMean',
          '/home/daniel/Data/ImageNetTxt/val50.txt',
-         '/home/daniel/Data/Experiments/running_errorp9.npz',
-         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9,
+         '/home/daniel/Data/Experiments/distillationp9.npz',
+         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, temp=2,
          synsets='/home/daniel/Data/ImageNetTxt/synsets.txt')
         
         

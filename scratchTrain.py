@@ -1,4 +1,4 @@
-'''Cifar CNN'''
+'''Outright train a CNN from scratch'''
 
 __authors__   = "Daniel Worrall"
 __copyright__ = "(c) 2015, University College London"
@@ -20,7 +20,7 @@ import lasagne
 from matplotlib import pyplot as plt
 # ##################### Build the neural network model #######################
 
-def build_cnn(im_shape, k, input_var=None):
+def build_cnn(im_shape, input_var=None):
     network = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
                                         input_var=input_var)
     network = lasagne.layers.Conv2DLayer(
@@ -43,16 +43,15 @@ def build_cnn(im_shape, k, input_var=None):
             W=lasagne.init.GlorotUniform(),
             nonlinearity=lasagne.nonlinearities.rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.DenseLayer(network, num_units=500,
-            W=lasagne.init.GlorotUniform(),
+    network = lasagne.layers.DenseLayer(lasagne.layers.dropout(network, 0.5),
+            num_units=500, W=lasagne.init.GlorotUniform(),
             nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.DenseLayer(network, num_units=500,
-            W=lasagne.init.GlorotUniform(),
+    network = lasagne.layers.DenseLayer(lasagne.layers.dropout(network, 0.5),
+            num_units=500, W=lasagne.init.GlorotUniform(),
             nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.DenseLayer(network, num_units=1000,
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.linear)
-    network = SoftermaxNonlinearity(network, k)
+    network = lasagne.layers.DenseLayer(lasagne.layers.dropout(network, 0.5),
+            num_units=1000, W=lasagne.init.GlorotUniform(),
+            nonlinearity=lasagne.nonlinearities.softmax)
     return network
 
 # ############################## Main program ################################
@@ -60,38 +59,34 @@ def build_cnn(im_shape, k, input_var=None):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(train_file, logit_folder, val_file, savename, num_epochs=500,
+def main(train_file, val_file, savename, num_epochs=500,
          margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None):
     print("Loading data...")
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
     # Variables
     input_var = T.tensor4('inputs')
-    soft_target = T.fmatrix('soft_target')
-    hard_target = T.ivector('hard_target')
-    temp_var = T.fvector('temp')
+    target_var = T.ivector('targets')
     learning_rate = T.fscalar('learning_rate')
     im_shape = (227, 227)
-    k = 5.55     # 1000 classes
     print("Building model and compiling functions...")
-    network = build_cnn(im_shape, k, input_var=input_var)
+    network = build_cnn(im_shape, input_var=input_var)
     # Losses and updates
-    soft_prediction = lasagne.layers.get_output(network, training=True)
-    hard_prediction = lasagne.layers.get_output(network, training=False)
-    loss = -temp_var*T.sum(soft_target*T.log(soft_prediction), axis=1)
-    loss += lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
+    prediction = lasagne.layers.get_output(network)
+    loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
     loss = loss.mean()
-    params = lasagne.layers.get_all_params(network)
+    params = lasagne.layers.get_all_params(network, deterministic=False)
     updates = lasagne.updates.nesterov_momentum(loss, params,
-                                                learning_rate=learning_rate,
-                                                momentum=momentum)
-    test_acc = T.mean(T.eq(T.argmax(hard_prediction, axis=1), hard_target),
+                                    learning_rate=learning_rate,
+                                    momentum=momentum)
+    # Validation and testing
+    test_prediction = lasagne.layers.get_output(network, deterministic=True)
+    test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), target_var),
                       dtype=theano.config.floatX)
     # Theano functions
-    train_fn = theano.function(
-        [input_var, soft_target, hard_target, temp_var, learning_rate],
+    train_fn = theano.function([input_var, target_var, learning_rate],
         loss, updates=updates)
-    val_fn = theano.function([input_var, hard_target], test_acc)
+    val_fn = theano.function([input_var, target_var], test_acc)
     print("Starting training...")
     # We iterate over epochs:
     start_time = time.time()
@@ -99,12 +94,11 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
         # In each epoch, we do a full pass over the training data:
         learning_rate = get_learning_rate(epoch, margin, base)
         train_err = 0; train_batches = 0; running_error = []
-        trdlg = data_logit_label_generator(tr_addresses, logit_folder, im_shape,
-                                           mb_size, k=k, preproc=True,
-                                           shuffle=True, synsets=synsets)
+        trdlg = data_and_label_generator(tr_addresses, tr_labels, im_shape,
+                                         mb_size, shuffle=True)
         for batch in threaded_gen(trdlg, num_cached=500):
-            inputs, soft, hard, temp = batch
-            local_train_err = train_fn(inputs, soft, hard, temp, learning_rate)
+            inputs, targets = batch
+            local_train_err = train_fn(inputs, targets, learning_rate)
             train_err += local_train_err
             train_batches += 1
             running_error.append(local_train_err)
@@ -158,30 +152,23 @@ def save_errors(filename, running_error):
 # ################################ Layers #####################################
 
 class SoftermaxNonlinearity(lasagne.layers.Layer):
-    def __init__(self, incoming, k, **kwargs):
+    def __init__(self, incoming, temp, **kwargs):
         super(SoftermaxNonlinearity, self).__init__(incoming, **kwargs)
-        self.k = k
+        self.temp = temp
 
     def get_output_for(self, input, training=False, **kwargs):
         if training:
             R = (T.max(input,axis=1)-T.min(input,axis=1)).dimshuffle(0,'x')
-            input = self.k*input/T.maximum(R,0.1)
+            input = self.temp*input/T.maximum(R,0.1)
         return T.exp(input)/T.sum(T.exp(input), axis=1).dimshuffle(0,'x')
 
-def softerMax(logits, k):
+def softerMax(logits, temp):
     '''Return the softermax function'''
     R = np.max(logits, axis=1) - np.min(logits, axis=1)
-    arg = k*logits/np.maximum(R,0.1)[:,np.newaxis]
-    return np.exp(arg)/np.sum(np.exp(arg), axis=1)[:,np.newaxis]
+    arg = temp*logits/np.maximum(R,0.1)[:,np.newaxis]
+    return np.exp(logits)/np.sum(np.exp(logits), axis=1)[:,np.newaxis]
 
 # ############################## Data handling ################################
-def get_metadata(srcfile):
-    '''Get all the addresses in the file'''
-    with open(srcfile, 'r') as fp:
-        lines = fp.readlines()
-        num_lines = len(lines)
-    return (lines, num_lines)
-
 def get_traindata(srcfile, synsets=None):
     '''Get the training data'''
     addresses = []; labels = []
@@ -208,9 +195,9 @@ def get_valdata(srcfile):
         labels.append(label)
     return (addresses, labels)
 
-def data_and_label_generator(addresses, labels, im_shape, mb_size):
+def data_and_label_generator(addresses, labels, im_shape, mb_size, shuffle=False):
     '''Get images and pair up with logits'''
-    order = ordering(len(addresses), shuffle=False)
+    order = ordering(len(addresses), shuffle=shuffle)
     batches = np.array_split(order, np.ceil(len(addresses)/(1.*mb_size)))
     for batch in batches:
         images = []; targets = []
@@ -224,45 +211,24 @@ def data_and_label_generator(addresses, labels, im_shape, mb_size):
         im = np.dstack(images)
         im = np.transpose(im, (2,1,0)).reshape(-1,3,im_shape[0],im_shape[1])
         output = np.hstack(targets).astype(np.int32)
+        # Really need to add some kind of preprocessing
         yield (im, output)
-
-def data_logit_label_generator(addresses, logit_folder, im_shape, mb_size,
-                               k=1, preproc=False, shuffle=True, synsets=None):
-    '''Get images and pair up with logits'''
-    pairs = get_synsets(synsets)
-    order = ordering(len(addresses), shuffle) 
-    batches = np.array_split(order, np.ceil(len(addresses)/(1.*mb_size)))
-    for batch in batches:
-        images = []; soft = []; hard = []; temp = [] 
-        for idx in batch:
-            # Load image
-            line = addresses[idx].rstrip('\n')
-            images.append(load_image(line, im_shape, preproc))
-            # Load logits
-            base = os.path.basename(line).replace('.JPEG','.npz')
-            target, T = load_target(base, logit_folder, k)
-            soft.append(target)
-            hard.append(pairs[base.split('_')[0]])
-            temp.append(T)
-        im = np.dstack(images)
-        im = np.transpose(im, (2,1,0)).reshape(-1,3,im_shape[0],im_shape[1])
-        soft_targets = np.vstack(soft).astype(np.float32)
-        hard_targets = np.hstack(hard).astype(np.int32)
-        temp = np.hstack(temp).astype(np.float32)
-        yield (im, soft_targets, hard_targets, temp)
 
 def load_image(address, im_shape, preproc=False):
     '''Return image in appropriate format'''
     image = cv2.resize(caffe_load_image(address), im_shape)
     return preprocess(image, 1, preproc=preproc)
 
-def load_target(base, logit_folder, k):
+def load_target(base, logit_folder, temp, pairs):
     '''Return the target in appropriate format''' 
     logit_address = logit_folder + '/' + base
     logits = np.load(logit_address)['arr_0']
-    soft_target = np.mean(softerMax(logits, k), axis=0)
-    T = np.amax(soft_target) - np.amin(soft_target)
-    return (soft_target[np.newaxis,:], T)
+    soft_target = np.mean(softerMax(logits, temp), axis=0)
+    if pairs is not None:
+        hard_target_idx = pairs[base.split('_')[0]]
+        soft_target[hard_target_idx] += 1
+        soft_target = soft_target/2.
+    return soft_target[np.newaxis,:]
 
 def ordering(num, shuffle=False):
     '''Return a possible random ordering'''
@@ -338,9 +304,8 @@ def preprocess(im, num_samples, preproc=True):
 
 if __name__ == '__main__':
     main('/home/daniel/Data/ImageNetTxt/transfer.txt',
-         '/home/daniel/Data/LogitsMean',
          '/home/daniel/Data/ImageNetTxt/val50.txt',
-         '/home/daniel/Data/Experiments/running_errorp9.npz',
+         '/home/daniel/Data/Experiments/scratch_train.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9,
          synsets='/home/daniel/Data/ImageNetTxt/synsets.txt')
         
