@@ -102,7 +102,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     params = lasagne.layers.get_all_params(network)
     for param in params:
         if param.name == 'W':
-            param = lasagne.updates.norm_constraint(param, max_norm)
+            param = lasagne.updates.norm_constraint(param, max_norm, epsilon=1e-3)
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                                 learning_rate=learning_rate,
                                                 momentum=momentum)
@@ -401,7 +401,7 @@ if __name__ == '__main__':
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/N1MLDAR/N1MLDAR.npz',
+         savename = data_root + 'Experiments/eps3/esp3.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, hw=hw,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
