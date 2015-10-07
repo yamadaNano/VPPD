@@ -387,14 +387,14 @@ def preprocess(im, num_samples, preproc=True):
 
 
 if __name__ == '__main__':
-    root = '/home/daniel/'
-    # root = 'home/dworrall'
-    main(train_file = root + 'Data/ImageNetTxt/transfer.txt',
-         logit_folder = root + 'Data/normedLogits/LogitsMean',
-         val_file = root + 'Data/ImageNetTxt/val50.txt',
-         savename = root + 'Data/Experiments/N1MLDAFtest/N1MLDAFtest.npz',
+    data_root = '/home/dworrall/Data/'
+    # data_root = 'home/daniel/Data'
+    main(train_file = data_root + 'ImageNetTxt/transfer.txt',
+         logit_folder = data_root + 'normedLogits/LogitsMean',
+         val_file = data_root + 'ImageNetTxt/val50.txt',
+         savename = data_root + 'Experiments/N1MLDAFtest/N1MLDAFtest.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9,
-         preproc=True, synsets= root +'Data/ImageNetTxt/synsets.txt')
+         preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes
 # N1-ML-(n)DA.npz
