@@ -424,7 +424,7 @@ if __name__ == '__main__':
          logit_folder = data_root + 'originalLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
          savename = data_root + 'Experiments/distill/distill2.npz',
-         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, temp=2,
+         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, temp=5,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes
