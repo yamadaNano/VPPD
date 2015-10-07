@@ -413,6 +413,7 @@ if __name__ == '__main__':
 # Network 1,2,3...
 # M = mean, L = Logit, A = Augmented logits
 # (n)DA (no/yes to) data augmentation
+# test for testing
         
         
         
