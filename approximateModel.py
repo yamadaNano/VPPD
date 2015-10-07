@@ -390,11 +390,12 @@ def preprocess(im, num_samples, preproc=True):
 
 
 if __name__ == '__main__':
-    #data_root = '/home/dworrall/Data/'
+    data_root = '/home/daniel/Data/'
     hw = 1.
     if len(sys.argv) > 1:
-        hw = float(sys.argv[1])
-    data_root = '/home/daniel/Data/'
+        data_root = sys.argv[1]
+    if len(sys.argv) > 2:
+        hw = float(sys.argv[2])
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
