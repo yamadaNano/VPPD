@@ -196,18 +196,6 @@ def save_errors(filename, running_error, err_type='error'):
 
 
 # ################################ Layers #####################################
-'''
-class SoftermaxNonlinearity(lasagne.layers.Layer):
-    def __init__(self, incoming, k, **kwargs):
-        super(SoftermaxNonlinearity, self).__init__(incoming, **kwargs)
-        self.k = k
-
-    def get_output_for(self, input, training=False, **kwargs):
-        if training:
-            R = (T.max(input,axis=1)-T.min(input,axis=1)).dimshuffle(0,'x')
-            input = self.k*input/T.maximum(R,0.1)
-        return T.exp(input)/T.sum(T.exp(input), axis=1).dimshuffle(0,'x')
-'''
 class SoftermaxNonlinearity(lasagne.layers.Layer):
     def __init__(self, incoming, k, **kwargs):
         super(SoftermaxNonlinearity, self).__init__(incoming, **kwargs)
