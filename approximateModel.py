@@ -390,12 +390,15 @@ def preprocess(im, num_samples, preproc=True):
 
 if __name__ == '__main__':
     #data_root = '/home/dworrall/Data/'
+    hw = 1.
+    if len(sys.argv) > 1:
+        hw = sys.argv[1]
     data_root = '/home/daniel/Data/'
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
          savename = data_root + 'Experiments/N1MLDAR/N1MLDAR.npz',
-         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, hw=1.,
+         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, hw=hw,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes
