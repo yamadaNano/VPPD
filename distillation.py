@@ -419,13 +419,16 @@ def preprocess(im, num_samples, preproc=True):
 if __name__ == '__main__':
     #data_root = '/home/dworrall/Data/'
     data_root = '/home/daniel/Data/'
+    temp = 5
     if len(sys.argv) > 1:
             data_root = sys.argv[1]
+    elif len(sys.argv) > 2:
+        temp = sys.argv[2]
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'originalLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
          savename = data_root + 'Experiments/distill/distill2.npz',
-         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, temp=5,
+         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, temp=temp,
          hw=0.1, preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes
