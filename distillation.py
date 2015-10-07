@@ -85,12 +85,15 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                                 learning_rate=learning_rate,
                                                 momentum=momentum)
+    train_acc = T.mean(T.eq(T.argmax(soft_prediction, axis=1),
+                            T.argmax(soft_target, axis=1)),
+                       dtype=theano.config.floatX)
     test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), hard_target),
                       dtype=theano.config.floatX)
     # Theano functions
     train_fn = theano.function(
         [input_var, soft_target, hard_target, learning_rate],
-        loss, updates=updates)
+        [loss, train_acc], updates=updates)
     val_fn = theano.function([input_var, hard_target], test_acc)
     print("Starting training...")
     # We iterate over epochs:
@@ -101,7 +104,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
         train_err = 0; train_batches = 0; running_error = []
         t_acc = 0; running_acc = []
         trdlg = distillation_generator(tr_addresses, logit_folder, im_shape,
-                                       mb_size, k=k, preproc=preproc,
+                                       mb_size, temp=temp, preproc=preproc,
                                        shuffle=True, synsets=synsets)
         for batch in threaded_gen(trdlg, num_cached=500):
             inputs, soft, hard = batch
