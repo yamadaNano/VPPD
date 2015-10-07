@@ -16,7 +16,8 @@ import theano
 import theano.tensor as T
 
 import lasagne
-
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 # ##################### Build the neural network model #######################
 

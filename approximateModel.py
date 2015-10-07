@@ -14,10 +14,12 @@ import skimage
 import skimage.io as skio
 import theano
 import theano.tensor as T
-import lasagne
 
+import lasagne
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
-from theano.compile.nanguardmode import NanGuardMode
+
 # ##################### Build the neural network model #######################
 
 def build_cnn(im_shape, k, input_var=None):
