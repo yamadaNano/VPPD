@@ -62,7 +62,8 @@ def build_cnn(im_shape, temp, input_var=None):
 # easier to read.
 
 def main(train_file, logit_folder, val_file, savename, num_epochs=500,
-         margin=25, base=0.01, mb_size=50, momentum=0.9, temp=1, synsets=None):
+         margin=25, base=0.01, mb_size=50, momentum=0.9, temp=1, preproc=True,
+         synsets=None):
     print("Loading data...")
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
