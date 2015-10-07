@@ -393,7 +393,7 @@ if __name__ == '__main__':
     #data_root = '/home/dworrall/Data/'
     hw = 1.
     if len(sys.argv) > 1:
-        hw = sys.argv[1]
+        hw = float(sys.argv[1])
     data_root = '/home/daniel/Data/'
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',

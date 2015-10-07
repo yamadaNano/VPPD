@@ -65,6 +65,7 @@ def build_cnn(im_shape, temp, input_var=None):
 def main(train_file, logit_folder, val_file, savename, num_epochs=500,
          margin=25, base=0.01, mb_size=50, momentum=0.9, temp=1, preproc=True,
          hw=0.1, synsets=None):
+    print('Using temperature: %f' % (temp,))
     print("Loading data...")
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
@@ -421,9 +422,9 @@ if __name__ == '__main__':
     data_root = '/home/daniel/Data/'
     temp = 5
     if len(sys.argv) > 1:
-            data_root = sys.argv[1]
+        data_root = sys.argv[1]
     elif len(sys.argv) > 2:
-        temp = sys.argv[2]
+        temp = float(sys.argv[2])
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'originalLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
