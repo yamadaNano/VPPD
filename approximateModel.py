@@ -65,7 +65,7 @@ def build_cnn(im_shape, k, input_var=None):
 # easier to read.
 
 def main(train_file, logit_folder, val_file, savename, num_epochs=500,
-         margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None,
+         margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None, hw=0.1,
          preproc=False):
     print("Loading data...")
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
@@ -89,7 +89,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     #loss = -temp_var*T.sum(soft_target*T.log(soft_prediction), axis=1)
     #loss = -T.sum(soft_target*T.log(soft_prediction), axis=1)
     loss = T.sum(soft_prediction*(T.log(soft_prediction) - T.log(soft_target)), axis=1)
-    loss += lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
+    loss += hw*lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
     loss = loss.mean()
     train_acc = T.mean(T.eq(T.argmax(soft_prediction, axis=1),
                             T.argmax(soft_target, axis=1)),
@@ -393,7 +393,7 @@ if __name__ == '__main__':
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
          savename = data_root + 'Experiments/N1MLDAR/N1MLDAR.npz',
-         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9,
+         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, hw=1.,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes

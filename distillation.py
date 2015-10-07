@@ -63,7 +63,7 @@ def build_cnn(im_shape, temp, input_var=None):
 
 def main(train_file, logit_folder, val_file, savename, num_epochs=500,
          margin=25, base=0.01, mb_size=50, momentum=0.9, temp=1, preproc=True,
-         synsets=None):
+         hw=0.1, synsets=None):
     print("Loading data...")
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
@@ -79,7 +79,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     soft_prediction, hard_prediction = lasagne.layers.get_output(network, deterministic=False)
     _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
     loss = -(temp**2)*T.sum(soft_target*T.log(soft_prediction), axis=1)
-    loss += lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
+    loss += hw*lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
     loss = loss.mean()
     params = lasagne.layers.get_all_params(network)
     updates = lasagne.updates.nesterov_momentum(loss, params,
@@ -425,7 +425,7 @@ if __name__ == '__main__':
          val_file = data_root + 'ImageNetTxt/val50.txt',
          savename = data_root + 'Experiments/distill/distill2.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, temp=5,
-         preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
+         hw=0.1, preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes
 # N1-ML-(n)DA.npz
