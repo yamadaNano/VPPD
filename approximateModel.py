@@ -24,22 +24,22 @@ def build_cnn(im_shape, k, input_var=None):
     incoming = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
                                         input_var=input_var)
     conv1 = lasagne.layers.Conv2DLayer(
-            incoming, num_filters=3, filter_size=(3, 3),
+            incoming, num_filters=32, filter_size=(3, 3),
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     pool1 = lasagne.layers.MaxPool2DLayer(conv1, pool_size=(3, 3), stride=2)
     conv2 = lasagne.layers.Conv2DLayer(
-            pool1, num_filters=6, filter_size=(3, 3),
+            pool1, num_filters=32, filter_size=(3, 3),
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     pool2 = lasagne.layers.MaxPool2DLayer(conv2, pool_size=(3, 3), stride=2)
     conv3 = lasagne.layers.Conv2DLayer(
-            pool2, num_filters=9, filter_size=(3, 3),
+            pool2, num_filters=64, filter_size=(3, 3),
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     pool3 = lasagne.layers.MaxPool2DLayer(conv3, pool_size=(3, 3), stride=2)
     conv4 = lasagne.layers.Conv2DLayer(
-            pool3, num_filters=12, filter_size=(3, 3),
+            pool3, num_filters=64, filter_size=(3, 3),
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     pool4 = lasagne.layers.MaxPool2DLayer(conv4, pool_size=(3, 3), stride=2)
@@ -87,8 +87,8 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     #test_prediction = lasagne.layers.get_output(network, training=False, deterministic=True)
     _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
     #loss = -temp_var*T.sum(soft_target*T.log(soft_prediction), axis=1)
-    loss = -T.sum(soft_target*T.log(soft_prediction), axis=1)
-    #loss = T.sum(soft_prediction*(T.log(soft_prediction) - T.log(soft_target)), axis=1)
+    #loss = -T.sum(soft_target*T.log(soft_prediction), axis=1)
+    loss = T.sum(soft_prediction*(T.log(soft_prediction) - T.log(soft_target)), axis=1)
     loss += lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
     loss = loss.mean()
     train_acc = T.mean(T.eq(T.argmax(soft_prediction, axis=1),
@@ -387,12 +387,12 @@ def preprocess(im, num_samples, preproc=True):
 
 
 if __name__ == '__main__':
-    data_root = '/home/dworrall/Data/'
-    # data_root = 'home/daniel/Data'
+    #data_root = '/home/dworrall/Data/'
+    data_root = '/home/daniel/Data/'
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/N1MLDAFtest/N1MLDAFtest.npz',
+         savename = data_root + 'Experiments/N1MLDAR/N1MLDAR.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         

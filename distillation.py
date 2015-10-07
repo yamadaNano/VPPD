@@ -1,4 +1,4 @@
-'''Cifar CNN'''
+'''Distillation experiments'''
 
 __authors__   = "Daniel Worrall"
 __copyright__ = "(c) 2015, University College London"
@@ -25,35 +25,36 @@ def build_cnn(im_shape, temp, input_var=None):
                                         input_var=input_var)
     network = lasagne.layers.Conv2DLayer(
             network, num_filters=32, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
     network = lasagne.layers.Conv2DLayer(
             network, num_filters=32, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
     network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
+            network, num_filters=64, filter_size=(3, 3),
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
     network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
+            network, num_filters=64, filter_size=(3, 3),
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.DenseLayer(network, num_units=500,
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.DenseLayer(network, num_units=500,
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
+    network = lasagne.layers.DenseLayer(network, num_units=2000,
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
+    network = lasagne.layers.DenseLayer(network, num_units=2000,
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     network = lasagne.layers.DenseLayer(network, num_units=1000,
-            W=lasagne.init.GlorotUniform(),
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.linear)
-    network = DistillationNonlinearity(network, temp)
-    return network
+    soft = DistillationNonlinearity(network, temp)
+    hard = SoftmaxNonlinearity(network)
+    return (soft, hard)
 
 # ############################## Main program ################################
 # Everything else will be handled in our main program now. We could pull out
@@ -74,8 +75,8 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     print("Building model and compiling functions...")
     network = build_cnn(im_shape, temp, input_var=input_var)
     # Losses and updates
-    soft_prediction = lasagne.layers.get_output(network, training=True)
-    hard_prediction = lasagne.layers.get_output(network, training=False)
+    soft_prediction, hard_prediction = lasagne.layers.get_output(network, deterministic=False)
+    _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
     loss = -(temp**2)*T.sum(soft_target*T.log(soft_prediction), axis=1)
     loss += lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
     loss = loss.mean()
@@ -83,7 +84,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                                 learning_rate=learning_rate,
                                                 momentum=momentum)
-    test_acc = T.mean(T.eq(T.argmax(hard_prediction, axis=1), hard_target),
+    test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), hard_target),
                       dtype=theano.config.floatX)
     # Theano functions
     train_fn = theano.function(
@@ -97,24 +98,29 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
         # In each epoch, we do a full pass over the training data:
         learning_rate = get_learning_rate(epoch, margin, base)
         train_err = 0; train_batches = 0; running_error = []
+        t_acc = 0; running_acc = []
         trdlg = distillation_generator(tr_addresses, logit_folder, im_shape,
-                                       mb_size, temp=temp, preproc=True,
+                                       mb_size, k=k, preproc=preproc,
                                        shuffle=True, synsets=synsets)
         for batch in threaded_gen(trdlg, num_cached=500):
             inputs, soft, hard = batch
-            local_train_err = train_fn(inputs, soft, hard, learning_rate)
-            train_err += local_train_err
-            train_batches += 1
-            running_error.append(local_train_err)
+            local_train_err, acc = train_fn(inputs, soft, hard, learning_rate)
+            train_err += local_train_err; t_acc += acc
+            running_error.append(local_train_err); running_acc.append(acc)
             h, m, s = theTime(start_time)
+            train_batches += 1
+            if train_batches % 257 == 0:
+                save_errors(savename, running_error, err_type='error')
+                save_errors(savename, running_acc, err_type='acc')
+                running_error = []; running_acc = []
             sys.stdout.write('Time: %d:%02d:%02d Minibatch: %i Training Error: %f\r' %
                              (h, m, s, train_batches, train_err/train_batches)),
             sys.stdout.flush()
         print
-        save_errors(savename, running_error)
         val_acc = 0; val_batches = 0
         vldlg = data_and_label_generator(vl_addresses, vl_labels, im_shape,
                                          mb_size)
+        running_val_acc = []
         for batch in threaded_gen(vldlg, num_cached=50):
             inputs, targets = batch
             val_acc += val_fn(inputs, targets)
@@ -122,6 +128,8 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
             sys.stdout.write('Minibatch: %i Validation Accuracy: %f\r' %
                              (val_batches, val_acc/val_batches * 100)),
             sys.stdout.flush()
+        running_val_acc.append(val_acc/val_batches)
+        save_errors(savename, running_val_acc, err_type='val_acc')
         print
         print("Epoch {} of {} took {:.3f}s".format(
             epoch + 1, num_epochs, time.time() - start_time))
@@ -140,30 +148,44 @@ def theTime(start):
     h, m = divmod(m, 60)
     return (h, m, s)
 
-def save_errors(filename, running_error):
-    print('Saving runtime progress')
+def save_errors(filename, running_error, err_type='error'):
     running_error = np.asarray(running_error)
-    if os.path.isfile(filename):
-        arr = np.load(filename)['running_error']
-        running_error = np.hstack((arr, running_error))
-    np.savez(filename, running_error=running_error)
+    savename = filename.split('.')
+    savename = savename[0] + err_type + '.npz'
+    if err_type == 'error':
+        if os.path.isfile(savename):
+            arr = np.load(savename)['running_error']
+            running_error = np.hstack((arr, running_error))
+    elif err_type == 'acc':
+        if os.path.isfile(savename):
+            arr = np.load(savename)['running_error']
+            running_error = np.hstack((arr, running_error))
+    elif err_type == 'val_acc':
+        if os.path.isfile(savename):
+            arr = np.load(savename)['running_error']
+            running_error = np.hstack((arr, running_error))
+    np.savez(savename, running_error=running_error)
     fig = plt.figure()
     plt.plot(running_error)
     plt.xlabel('Iterations')
-    plt.ylabel('Error')
-    plt.savefig(filename.replace('.npz','.png'))
+    if err_type == 'error':
+        plt.ylabel('Error')
+    elif err_type == 'acc':
+        plt.ylabel('Accuracy')
+    elif err_type == 'val_acc':
+        plt.ylabel('Validation Accuracy')
+    plt.savefig(savename.replace('.npz','.png'))
+    plt.close()
 
 # ################################ Layers #####################################
-
 class SoftermaxNonlinearity(lasagne.layers.Layer):
     def __init__(self, incoming, k, **kwargs):
         super(SoftermaxNonlinearity, self).__init__(incoming, **kwargs)
         self.k = k
 
-    def get_output_for(self, input, training=False, **kwargs):
-        if training:
-            R = (T.max(input,axis=1)-T.min(input,axis=1)).dimshuffle(0,'x')
-            input = self.k*input/T.maximum(R,0.1)
+    def get_output_for(self, input, **kwargs):
+        R = (T.max(input,axis=1)-T.min(input,axis=1)).dimshuffle(0,'x')
+        input = self.k*input/T.maximum(R,0.1)
         return T.exp(input)/T.sum(T.exp(input), axis=1).dimshuffle(0,'x')
 
 def softerMax(logits, k):
@@ -177,14 +199,24 @@ class DistillationNonlinearity(lasagne.layers.Layer):
         super(DistillationNonlinearity, self).__init__(incoming, **kwargs)
         self.temp = temp
 
-    def get_output_for(self, input, training=False, **kwargs):
-        if training:
-            input = input/self.temp
+    def get_output_for(self, input, **kwargs):
+        input = input/self.temp
         return T.exp(input)/T.sum(T.exp(input), axis=1).dimshuffle(0,'x')
 
 def distill(logits, temp):
     '''Return the distilled softmax function'''
     return np.exp(logits/temp)/np.sum(np.exp(logits/temp), axis=1)[:,np.newaxis]
+
+class SoftmaxNonlinearity(lasagne.layers.Layer):
+    def __init__(self, incoming, **kwargs):
+        super(SoftmaxNonlinearity, self).__init__(incoming, **kwargs)
+
+    def get_output_for(self, input, **kwargs):
+        return T.exp(input)/T.sum(T.exp(input), axis=1).dimshuffle(0,'x')
+
+def softMax(logits):
+    '''Return the softermax function'''
+    return np.exp(logits)/np.sum(np.exp(logits), axis=1)[:,np.newaxis]
 
 # ############################## Data handling ################################
 def get_metadata(srcfile):
@@ -291,6 +323,14 @@ def load_image(address, im_shape, preproc=False):
     image = cv2.resize(caffe_load_image(address), im_shape)
     return preprocess(image, 1, preproc=preproc)
 
+def load_target(base, logit_folder, k):
+    '''Return the target in appropriate format''' 
+    logit_address = logit_folder + '/' + base
+    data = np.load(logit_address)
+    logits, t = data['logits'], data['T']
+    soft_target = softMax(logits)
+    return (soft_target, t)
+
 def load_distil(base, logit_folder, temp):
     '''Return the target in appropriate format''' 
     logit_address = logit_folder + '/' + base
@@ -358,8 +398,9 @@ def preprocess(im, num_samples, preproc=True):
     if preproc == True:
         img = []
         for i in np.arange(num_samples):
+        # NEED TO IMPLEMENT RANDOM CROPS!!!
         # Random rotations
-            angle = np.random.rand() * 360.
+            angle = (np.random.rand()-0.5) * 40.
             M = cv2.getRotationMatrix2D((im.shape[1]/2,im.shape[0]/2), angle, 1)
             img.append(cv2.warpAffine(im, M, (im.shape[1],im.shape[0])))
             # Random fliplr
@@ -371,17 +412,59 @@ def preprocess(im, num_samples, preproc=True):
 
 
 if __name__ == '__main__':
-    main('/home/daniel/Data/ImageNetTxt/transfer.txt',
-         '/home/daniel/Data/LogitsMean',
-         '/home/daniel/Data/ImageNetTxt/val50.txt',
-         '/home/daniel/Data/Experiments/distillationp9.npz',
+    #data_root = '/home/dworrall/Data/'
+    data_root = '/home/daniel/Data/'
+    main(train_file = data_root + 'ImageNetTxt/transfer.txt',
+         logit_folder = data_root + 'normedLogits/LogitsMean',
+         val_file = data_root + 'ImageNetTxt/val50.txt',
+         savename = data_root + 'Experiments/distill/distill2.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, temp=2,
-         synsets='/home/daniel/Data/ImageNetTxt/synsets.txt')
+         preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
+        
+# Savename codes
+# N1-ML-(n)DA.npz
+# Network 1,2,3...
+# M = mean, L = Logit, A = Augmented logits
+# (n)DA (no/yes to) data augmentation
+# test for testing
         
         
         
         
         
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+
         
         
         
