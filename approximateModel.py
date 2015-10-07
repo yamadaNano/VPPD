@@ -14,49 +14,50 @@ import skimage
 import skimage.io as skio
 import theano
 import theano.tensor as T
-
 import lasagne
 
 from matplotlib import pyplot as plt
+from theano.compile.nanguardmode import NanGuardMode
 # ##################### Build the neural network model #######################
 
 def build_cnn(im_shape, k, input_var=None):
-    network = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
+    incoming = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
                                         input_var=input_var)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
+    conv1 = lasagne.layers.Conv2DLayer(
+            incoming, num_filters=3, filter_size=(3, 3),
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
+    pool1 = lasagne.layers.MaxPool2DLayer(conv1, pool_size=(3, 3), stride=2)
+    conv2 = lasagne.layers.Conv2DLayer(
+            pool1, num_filters=6, filter_size=(3, 3),
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=64, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
+    pool2 = lasagne.layers.MaxPool2DLayer(conv2, pool_size=(3, 3), stride=2)
+    conv3 = lasagne.layers.Conv2DLayer(
+            pool2, num_filters=9, filter_size=(3, 3),
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=64, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
+    pool3 = lasagne.layers.MaxPool2DLayer(conv3, pool_size=(3, 3), stride=2)
+    conv4 = lasagne.layers.Conv2DLayer(
+            pool3, num_filters=12, filter_size=(3, 3),
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(network, 0.5), num_units=2000,
-            W=lasagne.init.GlorotUniform(),
+    pool4 = lasagne.layers.MaxPool2DLayer(conv4, pool_size=(3, 3), stride=2)
+    full5 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(pool4, 0.5), num_units=2000,
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(network, 0.5), num_units=2000,
-            W=lasagne.init.GlorotUniform(),
+    full6 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(full5, 0.5), num_units=2000,
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(network, 0.5), num_units=1000,
-            W=lasagne.init.GlorotUniform(),
+    full7 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(full6, 0.5), num_units=1000,
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.linear)
-    network = SoftermaxNonlinearity(network, k)
-    return network
+    soft8 = SoftermaxNonlinearity(full7, k)
+    hard8 = SoftmaxNonlinearity(full7)
+    return (soft8, hard8)
 
 # ############################## Main program ################################
 # Everything else will be handled in our main program now. We could pull out
@@ -80,12 +81,14 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     print("Building model and compiling functions...")
     network = build_cnn(im_shape, k, input_var=input_var)
     # Losses and updates
-    soft_prediction = lasagne.layers.get_output(network, training=True, deterministic=False)
-    hard_prediction = lasagne.layers.get_output(network, training=False, determinisic=False)
-    test_prediction = lasagne.layers.get_output(network, training=False, deterministic=True)
+    #soft_prediction = lasagne.layers.get_output(network, training=True, deterministic=False)
+    #hard_prediction = lasagne.layers.get_output(network, training=False, determinisic=False)
+    soft_prediction, hard_prediction = lasagne.layers.get_output(network, deterministic=False)
+    #test_prediction = lasagne.layers.get_output(network, training=False, deterministic=True)
+    _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
     #loss = -temp_var*T.sum(soft_target*T.log(soft_prediction), axis=1)
-    #loss = -T.sum(soft_target*T.log(soft_prediction), axis=1)
-    loss = T.sum(soft_prediction*(T.log(soft_prediction) - T.log(soft_target)), axis=1)
+    loss = -T.sum(soft_target*T.log(soft_prediction), axis=1)
+    #loss = T.sum(soft_prediction*(T.log(soft_prediction) - T.log(soft_target)), axis=1)
     loss += lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
     loss = loss.mean()
     train_acc = T.mean(T.eq(T.argmax(soft_prediction, axis=1),
@@ -193,7 +196,7 @@ def save_errors(filename, running_error, err_type='error'):
 
 
 # ################################ Layers #####################################
-
+'''
 class SoftermaxNonlinearity(lasagne.layers.Layer):
     def __init__(self, incoming, k, **kwargs):
         super(SoftermaxNonlinearity, self).__init__(incoming, **kwargs)
@@ -203,6 +206,23 @@ class SoftermaxNonlinearity(lasagne.layers.Layer):
         if training:
             R = (T.max(input,axis=1)-T.min(input,axis=1)).dimshuffle(0,'x')
             input = self.k*input/T.maximum(R,0.1)
+        return T.exp(input)/T.sum(T.exp(input), axis=1).dimshuffle(0,'x')
+'''
+class SoftermaxNonlinearity(lasagne.layers.Layer):
+    def __init__(self, incoming, k, **kwargs):
+        super(SoftermaxNonlinearity, self).__init__(incoming, **kwargs)
+        self.k = k
+
+    def get_output_for(self, input, **kwargs):
+        R = (T.max(input,axis=1)-T.min(input,axis=1)).dimshuffle(0,'x')
+        input = self.k*input/T.maximum(R,0.1)
+        return T.exp(input)/T.sum(T.exp(input), axis=1).dimshuffle(0,'x')
+
+class SoftmaxNonlinearity(lasagne.layers.Layer):
+    def __init__(self, incoming, **kwargs):
+        super(SoftmaxNonlinearity, self).__init__(incoming, **kwargs)
+
+    def get_output_for(self, input, **kwargs):
         return T.exp(input)/T.sum(T.exp(input), axis=1).dimshuffle(0,'x')
 
 def softerMax(logits, k):
@@ -384,7 +404,7 @@ if __name__ == '__main__':
     main(train_file = root + 'Data/ImageNetTxt/transfer.txt',
          logit_folder = root + 'Data/normedLogits/LogitsMean',
          val_file = root + 'Data/ImageNetTxt/val50.txt',
-         savename = root + 'Data/Experiments/N1MLDAR/N1MLDAR.npz',
+         savename = root + 'Data/Experiments/N1MLDAFtest/N1MLDAFtest.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9,
          preproc=True, synsets= root +'Data/ImageNetTxt/synsets.txt')
         
