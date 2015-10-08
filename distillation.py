@@ -393,7 +393,7 @@ if __name__ == '__main__':
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'originalLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/distill/distill2.npz',
+         savename = data_root + 'Experiments/distillation/T' + str(temp) +'.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, temp=temp,
          hw=0.1, preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
