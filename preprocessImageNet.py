@@ -29,9 +29,9 @@ def main():
 
 def meanImages():
     im_shape = (227, 227)
-    filename = '/home/daniel/Data/ImageNetTxt/transfer.txt'
+    filename = '/home/daniel/Data/ImageNetTxt/val50.txt'
     meanfile = '/home/daniel/Data/ImageNetMoments/mean.npy'
-    savefolder = '/home/daniel/Data/ImageNet/pp_train'
+    savefolder = '/home/daniel/Data/ImageNet/pp_val'
     mean = numpy.load(meanfile)
     addresses = getAddresses(filename)
     for address in addresses:
@@ -55,7 +55,7 @@ def getAddresses(filename):
     with open(filename, 'r') as fp:
         lines = fp.readlines()
     for i, line in enumerate(lines):
-        lines[i] = line.rstrip('\n')
+        lines[i] = line.rstrip('\n').split(' ')[0]
     return lines
 
 def getMean(addresses, im_shape):

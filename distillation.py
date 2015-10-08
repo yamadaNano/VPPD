@@ -270,7 +270,8 @@ def data_and_label_generator(addresses, labels, im_shape, mb_size):
         for idx in batch:
             # Load image
             line = addresses[idx].rstrip('\n')
-            image = cv2.resize(caffe_load_image(line), im_shape)
+            #image = cv2.resize(caffe_load_image(line), im_shape)
+            image = np.load(line.astype(theano.config.floatX))
             image = preprocess(image, 1, preproc=False)
             images.append(image)
             targets.append(labels[idx])
@@ -292,7 +293,7 @@ def data_logit_label_generator(addresses, logit_folder, im_shape, mb_size,
             line = addresses[idx].rstrip('\n')
             images.append(load_image(line, im_shape, preproc))
             # Load logits
-            base = os.path.basename(line).replace('.JPEG','.npz')
+            base = os.path.basename(line).replace('.npy','.npz')
             target, T = load_target(base, logit_folder, k)
             soft.append(target)
             hard.append(pairs[base.split('_')[0]])
@@ -329,7 +330,8 @@ def distillation_generator(addresses, logit_folder, im_shape, mb_size,
         
 def load_image(address, im_shape, preproc=False):
     '''Return image in appropriate format'''
-    image = cv2.resize(caffe_load_image(address), im_shape)
+    #image = cv2.resize(caffe_load_image(address), im_shape)
+    image = np.load(address).astype(theano.config.floatX)
     return preprocess(image, 1, preproc=preproc)
 
 def load_target(base, logit_folder, k):

@@ -92,8 +92,8 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     #test_prediction = lasagne.layers.get_output(network, training=False, deterministic=True)
     _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
     #loss = -temp_var*T.sum(soft_target*T.log(soft_prediction), axis=1)
-    #loss = -T.sum(soft_target*T.log(soft_prediction), axis=1)
-    loss = T.sum(soft_prediction*(T.log(soft_prediction) - T.log(soft_target)), axis=1)
+    loss = -T.sum(soft_target*T.log(soft_prediction), axis=1)
+    #loss = T.sum(soft_prediction*(T.log(soft_prediction) - T.log(soft_target)), axis=1)
     loss += hw*lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
     loss = loss.mean()
     train_acc = T.mean(T.eq(T.argmax(soft_prediction, axis=1),
@@ -271,7 +271,8 @@ def data_and_label_generator(addresses, labels, im_shape, mb_size):
         for idx in batch:
             # Load image
             line = addresses[idx].rstrip('\n')
-            image = cv2.resize(caffe_load_image(line), im_shape)
+            #image = cv2.resize(caffe_load_image(line), im_shape)
+            image = np.load(line).astype(theano.config.floatX)
             image = preprocess(image, 1, preproc=False)
             images.append(image)
             targets.append(labels[idx])
@@ -293,7 +294,7 @@ def data_logit_label_generator(addresses, logit_folder, im_shape, mb_size,
             line = addresses[idx].rstrip('\n')
             images.append(load_image(line, im_shape, preproc))
             # Load logits
-            base = os.path.basename(line).replace('.JPEG','.npz')
+            base = os.path.basename(line).replace('.npy','.npz')
             target, t = load_target(base, logit_folder, k)
             soft.append(target)
             hard.append(pairs[base.split('_')[0]])
@@ -307,7 +308,8 @@ def data_logit_label_generator(addresses, logit_folder, im_shape, mb_size,
 
 def load_image(address, im_shape, preproc=False):
     '''Return image in appropriate format'''
-    image = cv2.resize(caffe_load_image(address), im_shape)
+    #image = cv2.resize(caffe_load_image(address), im_shape)
+    image = np.load(address).astype(theano.config.floatX)
     return preprocess(image, 1, preproc=preproc)
 
 def load_target(base, logit_folder, k):
@@ -401,7 +403,7 @@ if __name__ == '__main__':
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/N1MLDAR/N1MLDAR.npz',
+         savename = data_root + 'Experiments/N1MLDAF/N1MLDAF.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, hw=hw,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
