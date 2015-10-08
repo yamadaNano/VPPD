@@ -9,5 +9,5 @@ import os, sys, time
 
 temps = [1, 2, 5, 10, 20]
 for temp in temps:
-    command = "distillation.py '/home/dworrall/Data/' " + str(temps)
+    command = "python distillation.py '/home/dworrall/Data/' " + str(temps)
     os.system(command)
