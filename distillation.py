@@ -231,7 +231,7 @@ def data_and_label_generator(addresses, labels, im_shape, mb_size):
             # Load image
             line = addresses[idx].rstrip('\n')
             #image = cv2.resize(caffe_load_image(line), im_shape)
-            image = np.load(line.astype(theano.config.floatX))
+            image = np.load(line).astype(theano.config.floatX)
             image = preprocess(image, 1, preproc=False)
             images.append(image)
             targets.append(labels[idx])
