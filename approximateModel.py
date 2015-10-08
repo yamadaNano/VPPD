@@ -102,7 +102,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     params = lasagne.layers.get_all_params(network)
     for param in params:
         if param.name == 'W':
-            param = lasagne.updates.norm_constraint(param, max_norm)
+            param = lasagne.updates.norm_constraint(param, max_norm, epsilon=1e-3)
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                                 learning_rate=learning_rate,
                                                 momentum=momentum)
