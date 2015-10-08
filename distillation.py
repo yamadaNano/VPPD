@@ -278,7 +278,7 @@ def distillation_generator(addresses, logit_folder, im_shape, mb_size,
             line = addresses[idx].rstrip('\n')
             images.append(load_image(line, im_shape, preproc))
             # Load logits
-            base = os.path.basename(line).replace('.JPEG','.npz')
+            base = os.path.basename(line).replace('.npy','.npz')
             target = load_distil(base, logit_folder, temp)
             soft.append(target)
             hard.append(pairs[base.split('_')[0]])
