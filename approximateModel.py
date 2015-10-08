@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 
 import cPickle
 import cv2
+import nonlinearities as nl
 import numpy as np
 import skimage
 import skimage.io as skio
@@ -20,6 +21,7 @@ import theano
 import theano.tensor as T
 
 import lasagne
+
 
 
 # ##################### Build the neural network model #######################
@@ -59,8 +61,8 @@ def build_cnn(im_shape, k, input_var=None):
             lasagne.layers.dropout(full6, 0.5), num_units=1000,
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.linear)
-    soft8 = SoftermaxNonlinearity(full7, k)
-    hard8 = SoftmaxNonlinearity(full7)
+    soft8 = nl.SoftermaxNonlinearity(full7, k)
+    hard8 = nl.SoftmaxNonlinearity(full7)
     return (soft8, hard8)
 
 # ############################## Main program ################################
@@ -200,35 +202,6 @@ def save_errors(filename, running_error, err_type='error'):
     plt.savefig(savename.replace('.npz','.png'))
     plt.close()
 
-
-# ################################ Layers #####################################
-class SoftermaxNonlinearity(lasagne.layers.Layer):
-    def __init__(self, incoming, k, **kwargs):
-        super(SoftermaxNonlinearity, self).__init__(incoming, **kwargs)
-        self.k = k
-
-    def get_output_for(self, input, **kwargs):
-        R = (T.max(input,axis=1)-T.min(input,axis=1)).dimshuffle(0,'x')
-        input = self.k*input/T.maximum(R,0.1)
-        return T.exp(input)/(1e-3+T.sum(T.exp(input), axis=1).dimshuffle(0,'x'))
-
-class SoftmaxNonlinearity(lasagne.layers.Layer):
-    def __init__(self, incoming, **kwargs):
-        super(SoftmaxNonlinearity, self).__init__(incoming, **kwargs)
-
-    def get_output_for(self, input, **kwargs):
-        return T.exp(input)/(1e-3+T.sum(T.exp(input), axis=1).dimshuffle(0,'x'))
-
-def softerMax(logits, k):
-    '''Return the softermax function'''
-    R = np.max(logits, axis=1) - np.min(logits, axis=1)
-    arg = k*logits/np.maximum(R,0.1)[:,np.newaxis]
-    return np.exp(arg)/(1e-3+np.sum(np.exp(arg), axis=1)[:,np.newaxis])
-
-def softMax(logits):
-    '''Return the softermax function'''
-    return np.exp(logits)/(1e-3+np.sum(np.exp(logits), axis=1)[:,np.newaxis])
-
 # ############################## Data handling ################################
 def get_metadata(srcfile):
     '''Get all the addresses in the file'''
@@ -318,7 +291,7 @@ def load_target(base, logit_folder, k):
     logit_address = logit_folder + '/' + base
     data = np.load(logit_address)
     logits, t = data['logits'], data['T']
-    soft_target = softMax(logits)
+    soft_target = nl.softMax(logits)
     return (soft_target, t)
 
 def ordering(num, shuffle=False):
@@ -404,8 +377,8 @@ if __name__ == '__main__':
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/temp/temp.npz',
-         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, hw=hw,
+         savename = data_root + 'Experiments/temp2/temp2.npz',
+         num_epochs=50, margin=25, base=1e-3, mb_size=50, momentum=0.9, hw=hw,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes

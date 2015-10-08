@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 
 import cPickle
 import cv2
+import nonlinearities as nl
 import numpy as np
 import skimage
 import skimage.io as skio
@@ -56,8 +57,8 @@ def build_cnn(im_shape, temp, input_var=None):
     network = lasagne.layers.DenseLayer(network, num_units=1000,
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.linear)
-    soft = DistillationNonlinearity(network, temp)
-    hard = SoftmaxNonlinearity(network)
+    soft = nl.DistillationNonlinearity(network, temp)
+    hard = nl.SoftmaxNonlinearity(network)
     return (soft, hard)
 
 # ############################## Main program ################################
@@ -186,47 +187,6 @@ def save_errors(filename, running_error, err_type='error'):
     plt.savefig(savename.replace('.npz','.png'))
     plt.close()
 
-# ################################ Layers #####################################
-class SoftermaxNonlinearity(lasagne.layers.Layer):
-    def __init__(self, incoming, k, **kwargs):
-        super(SoftermaxNonlinearity, self).__init__(incoming, **kwargs)
-        self.k = k
-
-    def get_output_for(self, input, **kwargs):
-        R = (T.max(input,axis=1)-T.min(input,axis=1)).dimshuffle(0,'x')
-        input = self.k*input/T.maximum(R,0.1)
-        return T.exp(input)/(1e-3+T.sum(T.exp(input), axis=1).dimshuffle(0,'x'))
-
-def softerMax(logits, k):
-    '''Return the softermax function'''
-    R = np.max(logits, axis=1) - np.min(logits, axis=1)
-    arg = k*logits/np.maximum(R,0.1)[:,np.newaxis]
-    return np.exp(arg)/(1e-3+np.sum(np.exp(arg), axis=1)[:,np.newaxis])
-
-class DistillationNonlinearity(lasagne.layers.Layer):
-    def __init__(self, incoming, temp, **kwargs):
-        super(DistillationNonlinearity, self).__init__(incoming, **kwargs)
-        self.temp = temp
-
-    def get_output_for(self, input, **kwargs):
-        input = input/self.temp
-        return T.exp(input)/(1e-3+T.sum(T.exp(input), axis=1).dimshuffle(0,'x'))
-
-def distill(logits, temp):
-    '''Return the distilled softmax function'''
-    return np.exp(logits/temp)/(1e-3+np.sum(np.exp(logits/temp), axis=1)[:,np.newaxis])
-
-class SoftmaxNonlinearity(lasagne.layers.Layer):
-    def __init__(self, incoming, **kwargs):
-        super(SoftmaxNonlinearity, self).__init__(incoming, **kwargs)
-
-    def get_output_for(self, input, **kwargs):
-        return T.exp(input)/(1e-3+T.sum(T.exp(input), axis=1).dimshuffle(0,'x'))
-
-def softMax(logits):
-    '''Return the softermax function'''
-    return np.exp(logits)/(1e-3+np.sum(np.exp(logits), axis=1)[:,np.newaxis])
-
 # ############################## Data handling ################################
 def get_metadata(srcfile):
     '''Get all the addresses in the file'''
@@ -339,14 +299,14 @@ def load_target(base, logit_folder, k):
     logit_address = logit_folder + '/' + base
     data = np.load(logit_address)
     logits, t = data['logits'], data['T']
-    soft_target = softMax(logits)
+    soft_target = nl.softMax(logits)
     return (soft_target, t)
 
 def load_distil(base, logit_folder, temp):
     '''Return the target in appropriate format''' 
     logit_address = logit_folder + '/' + base
     logits = np.load(logit_address)['arr_0']
-    soft_target = np.mean(distill(logits, temp), axis=0)
+    soft_target = np.mean(nl.distill(logits, temp), axis=0)
     return soft_target[np.newaxis,:]
 
 def ordering(num, shuffle=False):
