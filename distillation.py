@@ -388,7 +388,7 @@ if __name__ == '__main__':
     temp = 5
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
-    elif len(sys.argv) > 2:
+    if len(sys.argv) > 2:
         temp = float(sys.argv[2])
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'originalLogits/LogitsMean',
