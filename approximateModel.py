@@ -79,6 +79,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     input_var = T.tensor4('inputs')
     soft_target = T.fmatrix('soft_target')
     hard_target = T.ivector('hard_target')
+    temp_var = T.fvector('temp_var')
     learning_rate = T.fscalar('learning_rate')
     im_shape = (227, 227)
     k = 5.55     # 1000 classes
@@ -92,7 +93,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     #test_prediction = lasagne.layers.get_output(network, training=False, deterministic=True)
     _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
     #loss = -temp_var*T.sum(soft_target*T.log(soft_prediction), axis=1)
-    loss = -T.sum(soft_target*T.log(soft_prediction), axis=1)
+    loss = -(temp_var**2)*T.sum(soft_target*T.log(soft_prediction), axis=1)
     #loss = T.sum(soft_prediction*(T.log(soft_prediction) - T.log(soft_target)), axis=1)
     loss += hw*lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
     loss = loss.mean()
@@ -110,7 +111,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
                       dtype=theano.config.floatX)
     # Theano functions
     train_fn = theano.function(
-        [input_var, soft_target, hard_target, learning_rate],
+        [input_var, soft_target, hard_target, temp_var, learning_rate],
         [loss, train_acc], updates=updates)
     val_fn = theano.function([input_var, hard_target], test_acc)
     print("Starting training...")
@@ -125,8 +126,8 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
                                            mb_size, k=k, preproc=preproc,
                                            shuffle=True, synsets=synsets)
         for batch in threaded_gen(trdlg, num_cached=500):
-            inputs, soft, hard, _ = batch
-            local_train_err, acc = train_fn(inputs, soft, hard, learning_rate)
+            inputs, soft, hard, temp = batch
+            local_train_err, acc = train_fn(inputs, soft, hard, temp, learning_rate)
             train_err += local_train_err; t_acc += acc
             running_error.append(local_train_err); running_acc.append(acc)
             h, m, s = theTime(start_time)
@@ -403,7 +404,7 @@ if __name__ == '__main__':
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/N1MLDAF/N1MLDAF.npz',
+         savename = data_root + 'Experiments/temp/temp.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, hw=hw,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
