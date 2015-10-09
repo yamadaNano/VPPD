@@ -71,11 +71,12 @@ def build_cnn(im_shape, k, input_var=None):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(train_file, logit_folder, val_file, savename, num_epochs=500,
+def main(train_file, logit_folder, val_file, savename, num_epochs=500, k=1.,
          margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None, hw=0.1,
          preproc=False):
     print("Loading data...")
     print('Using hard_target weight: %f' % (hw,))
+    print("Using k: %f" % (k,))
     tr_addresses, tr_labels = hd.get_traindata(train_file, synsets)
     vl_addresses, vl_labels = hd.get_valdata(val_file)
     # Variables
@@ -85,7 +86,6 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     temp_var = T.fvector('temp_var')
     learning_rate = T.fscalar('learning_rate')
     im_shape = (227, 227)
-    k = 5.55     # 1000 classes
     max_norm = 3.87
     print("Building model and compiling functions...")
     network = build_cnn(im_shape, k, input_var=input_var)
@@ -241,16 +241,19 @@ def preprocess(im, num_samples, preproc=True):
 if __name__ == '__main__':
     data_root = '/home/daniel/Data/'
     hw = 1.
+    k = 1.
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
     if len(sys.argv) > 2:
         hw = float(sys.argv[2])
+    if len(sys.argv) > 3:
+        k = float(sys.argv[3])
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
          savename = data_root + 'Experiments/VPPD/VPPD.npz',
-         num_epochs=50, margin=25, base=1e-2, mb_size=50, momentum=0.9, hw=hw,
-         preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
+         num_epochs=50, k=k, margin=25, base=1e-2, mb_size=50, momentum=0.9,
+         hw=hw, preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes
 # N1-ML-(n)DA.npz

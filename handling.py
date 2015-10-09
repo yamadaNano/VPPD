@@ -116,9 +116,11 @@ def load_target(base, logit_folder, k):
 """
 def load_target(base, logit_folder, k):
     '''Return the target in appropriate format'''
+    # Load logits
     logit_address = logit_folder + '/' + base
     data = np.load(logit_address)
     logits = data['logits']['arr_0']
+    # Normalize the logits
     R = np.maximum(np.amax(logits, axis=1) - np.amin(logits, axis=1), 0.1)
     t = R[:,np.newaxis]/k
     soft_target = nl.softMax(logits/t)
