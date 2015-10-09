@@ -377,8 +377,8 @@ if __name__ == '__main__':
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/temp2/temp2.npz',
-         num_epochs=50, margin=25, base=1e-3, mb_size=50, momentum=0.9, hw=hw,
+         savename = data_root + 'Experiments/mmtm/M80.npz',
+         num_epochs=50, margin=25, base=1e-2, mb_size=50, momentum=0.8, hw=hw,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes
