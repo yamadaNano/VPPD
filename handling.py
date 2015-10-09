@@ -122,7 +122,7 @@ def load_target(base, logit_folder, k):
     logits = data['arr_0']
     # Normalize the logits
     R = np.maximum(np.amax(logits, axis=1) - np.amin(logits, axis=1), 0.1)
-    t = R[:,np.newaxis]/k
+    t = R/k
     soft_target = nl.softMax(logits/t)
     return (soft_target, t)
 
