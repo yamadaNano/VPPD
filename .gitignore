@@ -1,3 +1,4 @@
 models/MNISTsplit.pkl
 models/splits/
 splits/
+.pyc
