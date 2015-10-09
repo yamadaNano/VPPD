@@ -219,24 +219,6 @@ def losses(soft_pred, hard_pred, soft_target, hard_target, temp_var, hw,
         sys.exit()
     return loss
         
-# ############################ Data preprocessing #############################
-def preprocess(im, num_samples, preproc=True):
-    '''Data normalizations and augmentations'''
-    if preproc == True:
-        img = []
-        for i in np.arange(num_samples):
-        # NEED TO IMPLEMENT RANDOM CROPS!!!
-        # Random rotations
-            angle = (np.random.rand()-0.5) * 40.
-            M = cv2.getRotationMatrix2D((im.shape[1]/2,im.shape[0]/2), angle, 1)
-            img.append(cv2.warpAffine(im, M, (im.shape[1],im.shape[0])))
-            # Random fliplr
-            if np.random.rand() > 0.5:
-                img[i] = img[i][:,::-1,...]
-    else:
-        img = (im,)*num_samples
-    return np.dstack(img)
-
 
 if __name__ == '__main__':
     data_root = '/home/daniel/Data/'

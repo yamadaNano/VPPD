@@ -9,5 +9,5 @@ import os, sys, time
 
 k = [0.5, 1, 2, 5, 10]
 for temp in k:
-    command = "python approximateModel.py '/home/dworrall/Data/' " + str(temp)
+    command = "python approximateModel.py '/home/dworrall/Data/' 0.1 " + str(temp)
     os.system(command)
