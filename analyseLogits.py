@@ -149,11 +149,66 @@ def orderedCov(C):
     P = numpy.zeros((C.shape[0],C.shape[0]))
     P[idx,numpy.arange(C.shape[0])] = 1
     return numpy.dot(numpy.dot(P.T,C),P)
+
+def viewLeading(srcfile):
+    '''Plot leading logit'''
+    lines, num_lines = get_metadata(srcfile)
+    fig = plt.figure()
+    for line in lines:
+        line = line.rstrip('\n')
+        logits = numpy.load(line)['arr_0']
+        sys.stdout.write('%s \r' % (line,))
+        sys.stdout.flush()
+        for t in numpy.arange(5):
+            plt.bar(numpy.arange(1000), softmax(logits/(4*t+1)).T)
+            plt.show()
+
+def leadingLogit(logits):
+    '''Do stuff'''
+    ll = numpy.amax(logits, axis=1)
     
+def teachacc(srcfile, synset, logitfolder):
+    '''Look at how accurate the teacher logits are'''
+    # Read line files
+    lines, num_lines = get_metadata(srcfile)
+    votes = {}
+    counts = {}
+    with open(synset, 'r') as sp:
+        syn = sp.readlines()
+    syndict = {}
+    for i, s in enumerate(syn):
+        s = s.rstrip('\n')
+        syndict[s] = i
+    # Read in logits and accumulate argmax votes
+    for i, line in enumerate(lines):
+        base = os.path.basename(line).rstrip('\n').split('.')[0]
+        fname = logitfolder + '/' + base + '.npz'
+        category = base.split('_')[0] 
+        logits = numpy.load(fname)['arr_0']
+        vote = numpy.argmax(logits, axis=1)
+        acc = numpy.equal(syndict[category], vote)
+        votes = inc(votes, category, acc*1)
+        sys.stdout.write('%s, %i\r' % (category, i))
+        sys.stdout.flush()
+    acc = 0.
+    for key in votes.keys():
+        acc += votes[key]
+    acc = acc/(i+1.)
+    print('Accuracy: %f' % (acc,))
+
+def inc(dictionary, category, amount):
+    '''Return incremented dictionary'''
+    if dictionary.has_key(category):
+        dictionary[category] += amount
+    else:
+        dictionary[category] = amount
+    return dictionary
+
 
 if __name__ == '__main__':
     srcfile = '/home/daniel/Data/ImageNetTxt/transfer.txt'
-    logitfolder = '/home/daniel/Data/AugLogits'
+    logitsrc = '/home/daniel/Data/ImageNetTxt/transferLogits.txt'
+    logitfolder = '/home/daniel/Data/originalLogits/LogitsMean'
     logitsCov = '/home/daniel/Data/LogitMoments/AugMeanLogitsCov.npy'
     logitsMean = '/home/daniel/Data/LogitMoments/softmaxMean.npy'
     dstfolder = '/home/daniel/Data/LogitMoments'
@@ -163,8 +218,9 @@ if __name__ == '__main__':
     #ipca(srcfile, logitfolder, dstfolder)
     #plotSvd(logitsCov)
     #plotMean(logitsMean)
-    consensus(srcfile, categories, synset, logitfolder)
-    
+    #consensus(srcfile, categories, synset, logitfolder)
+    #viewLeading(logitsrc)
+    teachacc(srcfile, synset, logitfolder)
     
     
     

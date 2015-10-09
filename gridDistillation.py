@@ -9,5 +9,5 @@ import os, sys, time
 
 temps = [1, 2, 5, 10, 20]
 for temp in temps:
-    command = "python distillation.py '/home/dworrall/Data/' " + str(temp)
+    command = "THEANO_FLAGS='device=gpu1' python distillation.py '/home/daniel/Data/' " + str(temp) + " VPPDtemp 1e-3"
     os.system(command)

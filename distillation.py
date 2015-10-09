@@ -67,9 +67,10 @@ def build_cnn(im_shape, temp, input_var=None):
 # easier to read.
 
 def main(train_file, logit_folder, val_file, savename, num_epochs=500,
-         margin=25, base=0.01, mb_size=50, momentum=0.9, temp=1, preproc=True,
-         hw=0.1, synsets=None):
+         margin=25, base=0.01, mb_size=50, momentum=0.9, temp=1,
+         loss_type='VPPD', preproc=True, hw=0.1, synsets=None):
     print('Using temperature: %f' % (temp,))
+    print('Loss type: %s' % (loss_type,))
     print("Loading data...")
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
@@ -84,9 +85,11 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     # Losses and updates
     soft_prediction, hard_prediction = lasagne.layers.get_output(network, deterministic=False)
     _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
-    loss = -(temp**2)*T.sum(soft_target*T.log(soft_prediction), axis=1)
-    loss += hw*lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
-    loss = loss.mean()
+    #loss = -(temp**2)*T.sum(soft_target*T.log(soft_prediction), axis=1)
+    #loss += hw*lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
+    #loss = loss.mean()
+    loss = losses(soft_prediction, hard_prediction, soft_target, hard_target,
+                  temp, hw, loss_type)
     params = lasagne.layers.get_all_params(network)
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                                 learning_rate=learning_rate,
@@ -186,6 +189,28 @@ def save_errors(filename, running_error, err_type='error'):
         plt.ylabel('Validation Accuracy')
     plt.savefig(savename.replace('.npz','.png'))
     plt.close()
+
+def losses(soft_pred, hard_pred, soft_target, hard_target, temp_var, hw,
+           loss_type):
+    '''Return a loss function'''
+    if loss_type == 'crossentropy':
+        loss = -(temp_var**2)*T.sum(soft_target*T.log(soft_pred), axis=1)
+        loss += hw*lasagne.objectives.categorical_crossentropy(hard_pred, hard_target)
+        loss = loss.mean()
+    elif loss_type == 'VPPD':
+        loss = T.sum(hard_pred*T.log(hard_pred), axis=1)
+        loss -= T.sum(soft_pred*T.log(soft_target), axis=1)
+        loss += hw*lasagne.objectives.categorical_crossentropy(hard_pred, hard_target)
+        loss = loss.mean()
+    elif loss_type == 'VPPDtemp':
+        loss = T.sum(hard_pred*T.log(hard_pred), axis=1)
+        loss -= (temp_var**2)*T.sum(soft_pred*T.log(soft_target), axis=1)
+        loss += hw*lasagne.objectives.categorical_crossentropy(hard_pred, hard_target)
+        loss = loss.mean()
+    else:
+        print('Loss type not recognised')
+        sys.exit()
+    return loss
 
 # ############################## Data handling ################################
 def get_metadata(srcfile):
@@ -386,16 +411,23 @@ if __name__ == '__main__':
     #data_root = '/home/dworrall/Data/'
     data_root = '/home/daniel/Data/'
     temp = 5
+    loss_type = 'VPPD'
+    base = 0.01
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
     if len(sys.argv) > 2:
         temp = float(sys.argv[2])
+    if len(sys.argv) > 3:
+        loss_type = sys.argv[3]
+    if len(sys.argv) > 4:
+        base = float(sys.argv[4])
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'originalLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/distillation/T' + str(temp) +'.npz',
-         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, temp=temp,
-         hw=0.1, preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
+         savename = data_root + 'Experiments/' + loss_type + '/T' + str(temp) +'.npz',
+         num_epochs=50, margin=25, base=base, mb_size=50, momentum=0.9,
+         temp=temp, loss_type=loss_type, hw=0.1, preproc=True,
+         synsets=data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes
 # N1-ML-(n)DA.npz

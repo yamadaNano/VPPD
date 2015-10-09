@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 
 import cPickle
 import cv2
+import handling as hd
 import nonlinearities as nl
 import numpy as np
 import skimage
@@ -75,8 +76,8 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
          preproc=False):
     print("Loading data...")
     print('Using hard_target weight: %f' % (hw,))
-    tr_addresses, tr_labels = get_traindata(train_file, synsets)
-    vl_addresses, vl_labels = get_valdata(val_file)
+    tr_addresses, tr_labels = hd.get_traindata(train_file, synsets)
+    vl_addresses, vl_labels = hd.get_valdata(val_file)
     # Variables
     input_var = T.tensor4('inputs')
     soft_target = T.fmatrix('soft_target')
@@ -89,16 +90,10 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     print("Building model and compiling functions...")
     network = build_cnn(im_shape, k, input_var=input_var)
     # Losses and updates
-    #soft_prediction = lasagne.layers.get_output(network, training=True, deterministic=False)
-    #hard_prediction = lasagne.layers.get_output(network, training=False, determinisic=False)
     soft_prediction, hard_prediction = lasagne.layers.get_output(network, deterministic=False)
-    #test_prediction = lasagne.layers.get_output(network, training=False, deterministic=True)
     _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
-    #loss = -temp_var*T.sum(soft_target*T.log(soft_prediction), axis=1)
-    loss = -(temp_var**2)*T.sum(soft_target*T.log(soft_prediction), axis=1)
-    #loss = T.sum(soft_prediction*(T.log(soft_prediction) - T.log(soft_target)), axis=1)
-    loss += hw*lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
-    loss = loss.mean()
+    loss = losses(soft_prediction, hard_prediction, soft_target, hard_target,
+                  temp_var, hw, 'VPPD')
     train_acc = T.mean(T.eq(T.argmax(soft_prediction, axis=1),
                             T.argmax(soft_target, axis=1)),
                        dtype=theano.config.floatX)
@@ -124,10 +119,10 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
         learning_rate = get_learning_rate(epoch, margin, base)
         train_err = 0; train_batches = 0; running_error = []
         t_acc = 0; running_acc = []
-        trdlg = data_logit_label_generator(tr_addresses, logit_folder, im_shape,
+        trdlg = hd.data_logit_label_generator(tr_addresses, logit_folder, im_shape,
                                            mb_size, k=k, preproc=preproc,
                                            shuffle=True, synsets=synsets)
-        for batch in threaded_gen(trdlg, num_cached=500):
+        for batch in hd.threaded_gen(trdlg, num_cached=500):
             inputs, soft, hard, temp = batch
             local_train_err, acc = train_fn(inputs, soft, hard, temp, learning_rate)
             train_err += local_train_err; t_acc += acc
@@ -143,10 +138,10 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
             sys.stdout.flush()
         print
         val_acc = 0; val_batches = 0
-        vldlg = data_and_label_generator(vl_addresses, vl_labels, im_shape,
+        vldlg = hd.data_and_label_generator(vl_addresses, vl_labels, im_shape,
                                          mb_size)
         running_val_acc = []
-        for batch in threaded_gen(vldlg, num_cached=50):
+        for batch in hd.threaded_gen(vldlg, num_cached=50):
             inputs, targets = batch
             val_acc += val_fn(inputs, targets)
             val_batches += 1
@@ -202,151 +197,27 @@ def save_errors(filename, running_error, err_type='error'):
     plt.savefig(savename.replace('.npz','.png'))
     plt.close()
 
-# ############################## Data handling ################################
-def get_metadata(srcfile):
-    '''Get all the addresses in the file'''
-    with open(srcfile, 'r') as fp:
-        lines = fp.readlines()
-        num_lines = len(lines)
-    return (lines, num_lines)
-
-def get_traindata(srcfile, synsets=None):
-    '''Get the training data'''
-    addresses = []; labels = []
-    with open(srcfile, 'r') as fp:
-        lines = fp.readlines()
-    pairs = get_synsets(synsets)
-    for line in lines:
-        address = line.rstrip('\n')
-        addresses.append(address)
-        if pairs is not None:
-            label = pairs[os.path.basename(address).split('_')[0]]
-            labels.append(label)
-    return (addresses, labels)
-
-def get_valdata(srcfile):
-    '''Get the validation data'''
-    addresses = []; labels = []
-    with open(srcfile, 'r') as fp:
-        lines = fp.readlines()
-    for line in lines:
-        address, label = line.rstrip('\n').split(' ')
-        label = np.int_(label)
-        addresses.append(address)
-        labels.append(label)
-    return (addresses, labels)
-
-def data_and_label_generator(addresses, labels, im_shape, mb_size):
-    '''Get images and pair up with logits'''
-    order = ordering(len(addresses), shuffle=False)
-    batches = np.array_split(order, np.ceil(len(addresses)/(1.*mb_size)))
-    for batch in batches:
-        images = []; targets = []
-        for idx in batch:
-            # Load image
-            line = addresses[idx].rstrip('\n')
-            #image = cv2.resize(caffe_load_image(line), im_shape)
-            image = np.load(line).astype(theano.config.floatX)
-            image = preprocess(image, 1, preproc=False)
-            images.append(image)
-            targets.append(labels[idx])
-        im = np.dstack(images)
-        im = np.transpose(im, (2,1,0)).reshape(-1,3,im_shape[0],im_shape[1])
-        output = np.hstack(targets).astype(np.int32)
-        yield (im, output)
-
-def data_logit_label_generator(addresses, logit_folder, im_shape, mb_size,
-                               k=1, preproc=False, shuffle=True, synsets=None):
-    '''Get images and pair up with logits'''
-    pairs = get_synsets(synsets)
-    order = ordering(len(addresses), shuffle) 
-    batches = np.array_split(order, np.ceil(len(addresses)/(1.*mb_size)))
-    for batch in batches:
-        images = []; soft = []; hard = []; temp = [] 
-        for idx in batch:
-            # Load image
-            line = addresses[idx].rstrip('\n')
-            images.append(load_image(line, im_shape, preproc))
-            # Load logits
-            base = os.path.basename(line).replace('.npy','.npz')
-            target, t = load_target(base, logit_folder, k)
-            soft.append(target)
-            hard.append(pairs[base.split('_')[0]])
-            temp.append(t)
-        im = np.dstack(images)
-        im = np.transpose(im, (2,1,0)).reshape(-1,3,im_shape[0],im_shape[1])
-        soft_targets = np.vstack(soft).astype(np.float32)
-        hard_targets = np.hstack(hard).astype(np.int32)
-        temp = np.hstack(temp).astype(np.float32)
-        yield (im, soft_targets, hard_targets, temp)
-
-def load_image(address, im_shape, preproc=False):
-    '''Return image in appropriate format'''
-    #image = cv2.resize(caffe_load_image(address), im_shape)
-    image = np.load(address).astype(theano.config.floatX)
-    return preprocess(image, 1, preproc=preproc)
-
-def load_target(base, logit_folder, k):
-    '''Return the target in appropriate format''' 
-    logit_address = logit_folder + '/' + base
-    data = np.load(logit_address)
-    logits, t = data['logits'], data['T']
-    soft_target = nl.softMax(logits)
-    return (soft_target, t)
-
-def ordering(num, shuffle=False):
-    '''Return a possible random ordering'''
-    order = np.arange(num)
-    if shuffle:
-        np.random.shuffle(order)
-    return order
-
-def get_synsets(synsets):
-    '''Return a dictionary with the synset mappings'''
-    pairs = None
-    if synsets is not None:
-        pairs = {}
-        with open(synsets, 'r') as sp:
-            syns = sp.readlines()
-        for i, syn in enumerate(syns):
-            pairs[syn.rstrip('\n')] = i 
-    return pairs
-
-def caffe_load_image(filename, color=True):
-    '''Load an image converting from grayscale or alpha as needed.'''
-    im = skimage.img_as_float(skio.imread(filename)).astype(theano.config.floatX)
-    if im.ndim == 2:
-        im = im[:, :, np.newaxis]
-        if color:
-            im = np.tile(im, (1, 1, 3))
-    elif im.shape[2] == 4:
-        im = im[:, :, :3]
-    return im
-
-def threaded_gen(generator, num_cached=50):
-    '''Threaded generator to multithread the data loading pipeline'''
-    import Queue
-    queue = Queue.Queue(maxsize=num_cached)
-    sentinel = object()  # guaranteed unique reference
-
-    # define producer (putting items into queue)
-    def producer():
-        for item in generator:
-            queue.put(item)
-        queue.put(sentinel)
-
-    # start producer (in a background thread)
-    import threading
-    thread = threading.Thread(target=producer)
-    thread.daemon = True
-    thread.start()
-
-    # run as consumer (read items from queue, in current thread)
-    item = queue.get()
-    while item is not sentinel:
-        yield item
-        queue.task_done()
-        item = queue.get()
+def losses(soft_pred, hard_pred, soft_target, hard_target, temp_var, hw,
+           loss_type):
+    '''Return a loss function'''
+    if loss_type == 'crossentropy':
+        loss = -(temp_var**2)*T.sum(soft_target*T.log(soft_pred), axis=1)
+        loss += hw*lasagne.objectives.categorical_crossentropy(hard_pred, hard_target)
+        loss = loss.mean()
+    elif loss_type == 'VPPD':
+        loss = T.sum(hard_pred*T.log(hard_pred), axis=1)
+        loss -= T.sum(soft_pred*T.log(soft_target), axis=1)
+        loss += hw*lasagne.objectives.categorical_crossentropy(hard_pred, hard_target)
+        loss = loss.mean()
+    elif loss_type == 'VPPDtemp':
+        loss = T.sum(hard_pred*T.log(hard_pred), axis=1)
+        loss -= (temp_var**2)*T.sum(soft_pred*T.log(soft_target), axis=1)
+        loss += hw*lasagne.objectives.categorical_crossentropy(hard_pred, hard_target)
+        loss = loss.mean()
+    else:
+        print('Loss type not recognised')
+        sys.exit()
+    return loss
         
 # ############################ Data preprocessing #############################
 def preprocess(im, num_samples, preproc=True):
@@ -377,7 +248,7 @@ if __name__ == '__main__':
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'normedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/mmtm/M80.npz',
+         savename = data_root + 'Experiments/VPPD/VPPD.npz',
          num_epochs=50, margin=25, base=1e-2, mb_size=50, momentum=0.9, hw=hw,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
