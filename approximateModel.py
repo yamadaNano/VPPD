@@ -93,7 +93,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500, k=1.,
     soft_prediction, hard_prediction = lasagne.layers.get_output(network, deterministic=False)
     _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
     loss = losses(soft_prediction, hard_prediction, soft_target, hard_target,
-                  temp_var, hw, 'VPPD')
+                  temp_var, hw, 'crossentropy')
     train_acc = T.mean(T.eq(T.argmax(soft_prediction, axis=1),
                             T.argmax(soft_target, axis=1)),
                        dtype=theano.config.floatX)
