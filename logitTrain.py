@@ -71,7 +71,7 @@ def build_cnn(im_shape, input_var=None):
 
 def main(train_file, logit_folder, val_file, savename, num_epochs=500,
          margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None,
-         preproc=False):
+         preproc=False, loss_type='crossentropy'):
     print("Loading data...")
     tr_addresses, tr_labels = hd.get_traindata(train_file, synsets)
     vl_addresses, vl_labels = hd.get_valdata(val_file)
@@ -87,8 +87,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     # Losses and updates
     prediction = lasagne.layers.get_output(network, deterministic=False)
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
-    loss = lasagne.objectives.categorical_crossentropy(prediction, soft_target)
-    loss = loss.mean()
+    loss = losses(predictions, soft_target, loss_type)
     train_acc = T.mean(T.eq(T.argmax(prediction, axis=1),
                         T.argmax(soft_target, axis=1)), dtype=theano.config.floatX)
     params = lasagne.layers.get_all_params(network)
@@ -189,17 +188,28 @@ def save_errors(filename, running_error, err_type='error'):
         plt.ylabel('Validation Accuracy')
     plt.savefig(savename.replace('.npz','.png'))
     plt.close()
-        
+
+def losses(predictions, targets, loss_type):
+    if loss_type == 'crossentropy':
+        loss = lasagne.objectives.categorical_crossentropy(prediction, soft_target)
+    elif loss_type == 'VPPD':
+        loss = T.sum(prediction*(T.log(prediction) - T.log(soft_target)), axis=1)
+    else:
+        print('Loss type not recognised')
+        sys.exit()
+    return loss.mean()
 
 if __name__ == '__main__':
     data_root = '/home/daniel/Data/'
-    hw = 1.
+    loss_type = 'crossentropy'
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
+    if len(sys.argv) > 2:
+        loss_type = sys.argv[2]
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'combinedTargets/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/combinations/T20_1.npz',
+         savename = data_root + 'Experiments/combinations/T20.npz',
          num_epochs=50, margin=25, base=1e-2, mb_size=50, momentum=0.9,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
