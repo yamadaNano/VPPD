@@ -34,7 +34,8 @@ def softerMax(logits, k):
 
 def softMax(logits):
     '''Return the softermax function'''
-    return np.exp(logits)/(1e-7+np.sum(np.exp(logits), axis=1)[:,np.newaxis])
+    e_x = np.exp(logits - np.amax(logits, axis=1)[:,np.newaxis])
+    return e_x/np.sum(e_x, axis=1)[:,np.newaxis]
 
 class DistillationNonlinearity(lasagne.layers.Layer):
     def __init__(self, incoming, temp, **kwargs):

@@ -99,6 +99,28 @@ def data_logit_label_generator(addresses, logit_folder, im_shape, mb_size,
         temp = np.hstack(temp).astype(np.float32)
         yield (im, soft_targets, hard_targets, temp)
 
+def data_target_generator(addresses, logit_folder, im_shape, mb_size,
+                          preproc=False, shuffle=True, synsets=None):
+    '''Get images and pair up with targets'''
+    pairs = get_synsets(synsets)
+    order = ordering(len(addresses), shuffle) 
+    batches = np.array_split(order, np.ceil(len(addresses)/(1.*mb_size)))
+    for batch in batches:
+        images = []; soft = []
+        for idx in batch:
+            # Load image
+            line = addresses[idx].rstrip('\n')
+            images.append(load_image(line, im_shape, preproc))
+            # Load logits
+            base = os.path.basename(line).replace('.npy','.npz')
+            logit_address = logit_folder + '/' + base
+            data = np.load(logit_address)['arr_0']
+            soft.append(data)
+        im = np.dstack(images)
+        im = np.transpose(im, (2,1,0)).reshape(-1,3,im_shape[0],im_shape[1])
+        soft_targets = np.vstack(soft).astype(np.float32)
+        yield (im, soft_targets)
+
 def load_image(address, im_shape, preproc=False):
     '''Return image in appropriate format'''
     #image = cv2.resize(caffe_load_image(address), im_shape)

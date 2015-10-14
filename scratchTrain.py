@@ -34,20 +34,20 @@ def build_cnn(im_shape, input_var=None):
             nonlinearity=lasagne.nonlinearities.rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
     network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
+            network, num_filters=64, filter_size=(3, 3),
             W=lasagne.init.GlorotUniform(),
             nonlinearity=lasagne.nonlinearities.rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
     network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
+            network, num_filters=64, filter_size=(3, 3),
             W=lasagne.init.GlorotUniform(),
             nonlinearity=lasagne.nonlinearities.rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
     network = lasagne.layers.DenseLayer(lasagne.layers.dropout(network, 0.5),
-            num_units=500, W=lasagne.init.GlorotUniform(),
+            num_units=2000, W=lasagne.init.GlorotUniform(),
             nonlinearity=lasagne.nonlinearities.rectify)
     network = lasagne.layers.DenseLayer(lasagne.layers.dropout(network, 0.5),
-            num_units=500, W=lasagne.init.GlorotUniform(),
+            num_units=2000, W=lasagne.init.GlorotUniform(),
             nonlinearity=lasagne.nonlinearities.rectify)
     network = lasagne.layers.DenseLayer(lasagne.layers.dropout(network, 0.5),
             num_units=1000, W=lasagne.init.GlorotUniform(),

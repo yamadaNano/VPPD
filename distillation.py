@@ -26,39 +26,42 @@ import lasagne
 # ##################### Build the neural network model #######################
 
 def build_cnn(im_shape, temp, input_var=None):
-    network = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
+    incoming = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
                                         input_var=input_var)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
+    conv1 = lasagne.layers.Conv2DLayer(
+            incoming, num_filters=32, filter_size=(3, 3), name='conv1',
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
+    pool1 = lasagne.layers.MaxPool2DLayer(conv1, pool_size=(3, 3), stride=2)
+    conv2 = lasagne.layers.Conv2DLayer(
+            pool1, num_filters=32, filter_size=(3, 3), name='conv2',
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=64, filter_size=(3, 3),
+    pool2 = lasagne.layers.MaxPool2DLayer(conv2, pool_size=(3, 3), stride=2)
+    conv3 = lasagne.layers.Conv2DLayer(
+            pool2, num_filters=64, filter_size=(3, 3), name='conv3',
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=64, filter_size=(3, 3),
+    pool3 = lasagne.layers.MaxPool2DLayer(conv3, pool_size=(3, 3), stride=2)
+    conv4 = lasagne.layers.Conv2DLayer(
+            pool3, num_filters=64, filter_size=(3, 3), name='conv4',
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.DenseLayer(network, num_units=2000,
+    pool4 = lasagne.layers.MaxPool2DLayer(conv4, pool_size=(3, 3), stride=2)
+    full5 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(pool4, 0.5), num_units=2000, name='full5',
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.DenseLayer(network, num_units=2000,
+    full6 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(full5, 0.5), num_units=2000, name='full6',
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    network = lasagne.layers.DenseLayer(network, num_units=1000,
+    full7 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(full6, 0.5), num_units=1000, name='full7',
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.linear)
-    soft = nl.DistillationNonlinearity(network, temp)
-    hard = nl.SoftmaxNonlinearity(network)
+    soft = nl.DistillationNonlinearity(full7, temp)
+    hard = nl.SoftmaxNonlinearity(full7)
     return (soft, hard)
 
 # ############################## Main program ################################
@@ -68,9 +71,11 @@ def build_cnn(im_shape, temp, input_var=None):
 
 def main(train_file, logit_folder, val_file, savename, num_epochs=500,
          margin=25, base=0.01, mb_size=50, momentum=0.9, temp=1,
-         loss_type='VPPD', preproc=True, hw=0.1, synsets=None):
+         loss_type='VPPD', preproc=True, hw=0.1, synsets=None,
+         modelFile='./myModel.pkl'):
     print('Using temperature: %f' % (temp,))
     print('Loss type: %s' % (loss_type,))
+    print('Model file: %s' % (modelFile,))
     print("Loading data...")
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
@@ -85,9 +90,6 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     # Losses and updates
     soft_prediction, hard_prediction = lasagne.layers.get_output(network, deterministic=False)
     _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
-    #loss = -(temp**2)*T.sum(soft_target*T.log(soft_prediction), axis=1)
-    #loss += hw*lasagne.objectives.categorical_crossentropy(hard_prediction, hard_target)
-    #loss = loss.mean()
     loss = losses(soft_prediction, hard_prediction, soft_target, hard_target,
                   temp, hw, loss_type)
     params = lasagne.layers.get_all_params(network)
@@ -148,8 +150,20 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
             epoch + 1, num_epochs, time.time() - start_time))
         print("  train loss:\t\t{:.6f}".format(train_err / train_batches))
         print("  valid acc:\t\t{:.6f}".format(val_acc / val_batches * 100.))
+        save_model(network, modelFile)
 
 # ################################ Helpers ####################################
+
+def save_model(model, file_name):
+    '''Save the model parameters'''
+    print('Saving model..')
+    params = {}
+    for param in lasagne.layers.get_all_params(model):
+        params[str(param)] = param.get_value()
+    
+    file = open(file_name, 'w')
+    cPickle.dump(params, file, cPickle.HIGHEST_PROTOCOL)
+    file.close()
 
 def get_learning_rate(epoch, margin, base):
     return base*margin/np.maximum(epoch,margin)
@@ -410,8 +424,8 @@ def preprocess(im, num_samples, preproc=True):
 if __name__ == '__main__':
     #data_root = '/home/dworrall/Data/'
     data_root = '/home/daniel/Data/'
-    temp = 5
-    loss_type = 'VPPD'
+    temp = 1
+    loss_type = 'standard'
     base = 0.01
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
@@ -422,13 +436,13 @@ if __name__ == '__main__':
     if len(sys.argv) > 4:
         base = float(sys.argv[4])
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
-         logit_folder = data_root + 'originalLogits/LogitsMean',
+         logit_folder = data_root + 'combinedLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/' + loss_type + '/T' + str(temp) +'.npz',
+         savename = data_root + 'Experiments/combinations/T' + str(temp) +'.npz',
          num_epochs=50, margin=25, base=base, mb_size=50, momentum=0.9,
          temp=temp, loss_type=loss_type, hw=0.1, preproc=True,
-         synsets=data_root +'ImageNetTxt/synsets.txt')
-        
+         synsets=data_root +'ImageNetTxt/synsets.txt',
+         modelFile= data_root + 'Experiments/combinations/T' + str(int(temp)) + '.pkl')
 # Savename codes
 # N1-ML-(n)DA.npz
 # Network 1,2,3...
