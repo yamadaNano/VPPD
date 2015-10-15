@@ -203,8 +203,10 @@ def losses(prediction, target, loss_type):
     return loss.mean()
 
 def regularization(prediction, t):
-    return (t**2)*T.mean(T.log(T.sum(T.pow(prediction,1./t),axis=1)))
-
+    #return (t**2)*T.mean(T.log(T.sum(T.pow(prediction,1./t),axis=1)))
+    # variant
+    return t*T.mean(T.log(T.sum(T.pow(prediction,1./t),axis=1)))
+    
 if __name__ == '__main__':
     data_root = '/home/daniel/Data/'
     loss_type = 'crossentropy'
