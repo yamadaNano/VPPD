@@ -80,14 +80,17 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     soft_target = T.fmatrix('soft_target')
     hard_target = T.ivector('hard_target')
     learning_rate = T.fscalar('learning_rate')
+    temp = T.fscalar('temp')
     im_shape = (227, 227)
     max_norm = 3.87
+    t = 10.
     print("Building model and compiling functions...")
     network = build_cnn(im_shape, input_var=input_var)
     # Losses and updates
     prediction = lasagne.layers.get_output(network, deterministic=False)
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
-    loss = losses(predictions, soft_target, loss_type)
+    loss = losses(prediction, soft_target, loss_type)
+    loss += regularization(prediction, t)
     train_acc = T.mean(T.eq(T.argmax(prediction, axis=1),
                         T.argmax(soft_target, axis=1)), dtype=theano.config.floatX)
     params = lasagne.layers.get_all_params(network)
@@ -112,8 +115,8 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
         train_err = 0; train_batches = 0; running_error = []
         t_acc = 0; running_acc = []
         trdlg = hd.data_target_generator(tr_addresses, logit_folder,
-                                         im_shape, mb_size, preproc=preproc,
-                                         shuffle=True, synsets=synsets)
+                                              im_shape, mb_size, preproc=preproc,
+                                              shuffle=True, synsets=synsets)
         for batch in hd.threaded_gen(trdlg, num_cached=500):
             inputs, soft = batch
             local_train_err, acc = train_fn(inputs, soft, learning_rate)
@@ -189,15 +192,18 @@ def save_errors(filename, running_error, err_type='error'):
     plt.savefig(savename.replace('.npz','.png'))
     plt.close()
 
-def losses(predictions, targets, loss_type):
+def losses(prediction, target, loss_type):
     if loss_type == 'crossentropy':
-        loss = lasagne.objectives.categorical_crossentropy(prediction, soft_target)
+        loss = -T.sum(target*T.log(prediction), axis=1)
     elif loss_type == 'VPPD':
-        loss = T.sum(prediction*(T.log(prediction) - T.log(soft_target)), axis=1)
+        loss = T.sum(prediction*(T.log(prediction) - T.log(target)), axis=1)
     else:
         print('Loss type not recognised')
         sys.exit()
     return loss.mean()
+
+def regularization(prediction, t):
+    return (t**2)*T.mean(T.log(T.sum(T.pow(prediction,1./t),axis=1)))
 
 if __name__ == '__main__':
     data_root = '/home/daniel/Data/'
@@ -209,8 +215,8 @@ if __name__ == '__main__':
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'combinedTargets/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/combinations/T20.npz',
-         num_epochs=50, margin=25, base=1e-2, mb_size=50, momentum=0.9,
+         savename = data_root + 'Experiments/bridge/T10_0p005.npz',
+         num_epochs=50, margin=25, base=5e-3, mb_size=50, momentum=0.9,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
         
 # Savename codes
