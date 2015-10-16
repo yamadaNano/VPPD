@@ -193,8 +193,9 @@ def data_and_label_generator(addresses, labels, im_shape, mb_size, shuffle=False
         for idx in batch:
             # Load image
             line = addresses[idx].rstrip('\n')
-            image = cv2.resize(caffe_load_image(line), im_shape)
-            image = preprocess(image, 1, preproc=False)
+            #image = cv2.resize(caffe_load_image(line), im_shape)
+            #image = preprocess(image, 1, preproc=False)
+            image = numpy.load(line)
             images.append(image)
             targets.append(labels[idx])
         im = np.dstack(images)
