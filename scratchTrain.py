@@ -100,6 +100,7 @@ def main(train_file, val_file, savename, num_epochs=500, temp=1., rw=0.1,
         # In each epoch, we do a full pass over the training data:
         learning_rate = get_learning_rate(epoch, margin, base)
         train_err = 0; train_batches = 0; running_error = []; running_acc = []
+        acc = 0.
         trdlg = data_and_label_generator(tr_addresses, tr_labels, im_shape,
                                          mb_size, shuffle=True)
         for batch in threaded_gen(trdlg, num_cached=500):
