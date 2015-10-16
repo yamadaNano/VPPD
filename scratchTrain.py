@@ -20,39 +20,42 @@ import lasagne
 from matplotlib import pyplot as plt
 # ##################### Build the neural network model #######################
 
-def build_cnn(im_shape, input_var=None):
-    network = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
+def build_cnn(im_shape, temp, input_var=None):
+    incoming = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
                                         input_var=input_var)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=64, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=64, filter_size=(3, 3),
-            W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(3, 3), stride=2)
-    network = lasagne.layers.DenseLayer(lasagne.layers.dropout(network, 0.5),
-            num_units=2000, W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.DenseLayer(lasagne.layers.dropout(network, 0.5),
-            num_units=2000, W=lasagne.init.GlorotUniform(),
-            nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.DenseLayer(lasagne.layers.dropout(network, 0.5),
-            num_units=1000, W=lasagne.init.GlorotUniform(),
+    conv1 = lasagne.layers.Conv2DLayer(
+            incoming, num_filters=32, filter_size=(3, 3), name='conv1',
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
+    pool1 = lasagne.layers.MaxPool2DLayer(conv1, pool_size=(3, 3), stride=2)
+    conv2 = lasagne.layers.Conv2DLayer(
+            pool1, num_filters=32, filter_size=(3, 3), name='conv2',
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
+    pool2 = lasagne.layers.MaxPool2DLayer(conv2, pool_size=(3, 3), stride=2)
+    conv3 = lasagne.layers.Conv2DLayer(
+            pool2, num_filters=64, filter_size=(3, 3), name='conv3',
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
+    pool3 = lasagne.layers.MaxPool2DLayer(conv3, pool_size=(3, 3), stride=2)
+    conv4 = lasagne.layers.Conv2DLayer(
+            pool3, num_filters=64, filter_size=(3, 3), name='conv4',
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
+    pool4 = lasagne.layers.MaxPool2DLayer(conv4, pool_size=(3, 3), stride=2)
+    full5 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(pool4, 0.5), num_units=2000, name='full5',
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
+    full6 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(full5, 0.5), num_units=2000, name='full6',
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
+    full7 = lasagne.layers.DenseLayer(
+            lasagne.layers.dropout(full6, 0.5), num_units=1000, name='full7',
+            W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.softmax)
-    return network
+    return hard
 
 # ############################## Main program ################################
 # Everything else will be handled in our main program now. We could pull out

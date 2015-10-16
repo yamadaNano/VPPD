@@ -425,7 +425,7 @@ if __name__ == '__main__':
     #data_root = '/home/dworrall/Data/'
     data_root = '/home/daniel/Data/'
     temp = 1
-    loss_type = 'standard'
+    loss_type = 'crossentropy'
     base = 0.01
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
@@ -436,13 +436,13 @@ if __name__ == '__main__':
     if len(sys.argv) > 4:
         base = float(sys.argv[4])
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
-         logit_folder = data_root + 'combinedLogits/LogitsMean',
+         logit_folder = data_root + 'originalLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/combinations/T' + str(temp) +'.npz',
+         savename = data_root + 'Experiments/distillation2/T' + str(temp) +'.npz',
          num_epochs=50, margin=25, base=base, mb_size=50, momentum=0.9,
          temp=temp, loss_type=loss_type, hw=0.1, preproc=True,
          synsets=data_root +'ImageNetTxt/synsets.txt',
-         modelFile= data_root + 'Experiments/combinations/T' + str(int(temp)) + '.pkl')
+         modelFile= data_root + 'Experiments/distillation2/T' + str(int(temp)) + '.pkl')
 # Savename codes
 # N1-ML-(n)DA.npz
 # Network 1,2,3...

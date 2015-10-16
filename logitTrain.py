@@ -71,8 +71,10 @@ def build_cnn(im_shape, input_var=None):
 
 def main(train_file, logit_folder, val_file, savename, num_epochs=500,
          margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None,
-         preproc=False, loss_type='crossentropy'):
+         preproc=False, loss_type='crossentropy', bridgecoeff=1.):
     print("Loading data...")
+    print('Loss type: %s' % (loss_type,))
+    print('Bridge coeff: %s' % (bridgecoeff,))
     tr_addresses, tr_labels = hd.get_traindata(train_file, synsets)
     vl_addresses, vl_labels = hd.get_valdata(val_file)
     # Variables
@@ -90,7 +92,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     prediction = lasagne.layers.get_output(network, deterministic=False)
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     loss = losses(prediction, soft_target, loss_type)
-    loss += regularization(prediction, t)
+    loss += bridgecoeff*regularization(prediction, t)
     train_acc = T.mean(T.eq(T.argmax(prediction, axis=1),
                         T.argmax(soft_target, axis=1)), dtype=theano.config.floatX)
     params = lasagne.layers.get_all_params(network)
@@ -203,23 +205,25 @@ def losses(prediction, target, loss_type):
     return loss.mean()
 
 def regularization(prediction, t):
-    #return (t**2)*T.mean(T.log(T.sum(T.pow(prediction,1./t),axis=1)))
-    # variant
-    return t*T.mean(T.log(T.sum(T.pow(prediction,1./t),axis=1)))
+    return (t**2)*T.mean(T.log(T.sum(T.pow(prediction,1./t),axis=1)))
     
 if __name__ == '__main__':
     data_root = '/home/daniel/Data/'
     loss_type = 'crossentropy'
+    bridgecoeff = 1.
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
     if len(sys.argv) > 2:
         loss_type = sys.argv[2]
+    if len(sys.argv) > 3:
+        bridgecoeff = float(sys.argv[3])
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
-         logit_folder = data_root + 'combinedTargets/LogitsMean',
+         logit_folder = data_root + 'targets/combinedTargets/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/bridge/T10_0p005.npz',
-         num_epochs=50, margin=25, base=5e-3, mb_size=50, momentum=0.9,
-         preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt')
+         savename = data_root + 'Experiments/bridgecoeff/T10_0p8.npz',
+         num_epochs=50, margin=25, base=1e-2, mb_size=50, momentum=0.9,
+         preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt',
+         bridgecoeff=bridgecoeff)
         
 # Savename codes
 # N1-ML-(n)DA.npz

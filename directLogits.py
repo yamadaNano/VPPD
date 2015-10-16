@@ -12,8 +12,8 @@ import numpy
 
 def main():
     filename = '/home/daniel/Data/ImageNetTxt/transfer.txt'
-    foldername = '/home/daniel/Data/originalLogits/LogitsMean'
-    saveFolder = '/home/daniel/Data/combinedTargets/LogitsMean'
+    foldername = '/home/daniel/Data/targets/originalLogits/LogitsMean'
+    saveFolder = '/home/daniel/Data/targets/combinedTargets/normedLogitsMean'
     synsets = '/home/daniel/Data/ImageNetTxt/synsets.txt'
     lines = openFile(filename, foldername)
     pairs = getSynsets(synsets)
@@ -27,7 +27,9 @@ def main():
         t_x = softmax(data/T)
         y_x = getOneHot(t_x.shape, pairs[syn])
         c_x = L*y_x + T*t_x
-        numpy.savez(savename, c_x)
+        s_x = numpy.sum(c_x)
+        c_x = c_x / s_x
+        numpy.savez(savename, c_x=c_x, s_x=s_x)
         sys.stdout.flush()
         sys.stdout.write('%s \r' % (savename,))
         

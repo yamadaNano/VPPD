@@ -57,12 +57,33 @@ def getRN():
 
 def getLocus(z=numpy.random.randn(20,3) , m=1000):
     #z = numpy.asarray([0, 1, 1.3])[numpy.newaxis,:]
-    T = numpy.logspace(numpy.log(0.5),numpy.log(10), m)
+    T = numpy.logspace(numpy.log(1),numpy.log(10), m)
     Z = []
     for t in T:
-        Z.append(z*t)
+        Z.append(z/t)
     Z = numpy.vstack(Z)
     return softmax(Z)
+
+def softTarget(l, m=1000):
+    S = getLocus(numpy.random.randn(1,3), m=m)
+    Y = numpy.zeros((3,))
+    Y[numpy.argmax(S[0,:])] = 1
+    T = numpy.logspace(numpy.log(1),numpy.log(10), m)
+    c = []
+    A = []
+    for t in T:
+        a = t/(t+l)
+        b = l/(t+l)
+        c.append(a*S[t,:] + b*Y)
+        print a, S[t,:], Y, a*S[t,:] + b*Y
+    return (numpy.vstack(c),S)
+
+def convexCombinations():
+    z = numpy.random.randn(2,3)
+    s = softmax(z)
+    l = numpy.linspace(0,1,100)
+    L = numpy.vstack((l,1-l)).T
+    return numpy.dot(L,s)
 
 def randomErrors(n=10, sigma=0.1):
     '''Return Gaussian logits errors'''
@@ -87,16 +108,20 @@ def circularErrors(n=10, r=0.1):
     return y + bary_errors #errors
 
 if __name__ == '__main__':
-    f = plt.figure(figsize=(12, 9))
-    
     Y = getRN()
     Y2 = getLocus()
     Y3 = circularErrors(n=100, r=0.1)
     #Y3 = randomErrors(sigma=0.1)
     Y3 = getLocus(Y3, m=20)
+    Y4 = convexCombinations()
+    Y5, Y6 = softTarget(0.1, m=1000)
+    f = plt.figure(figsize=(12, 9))
     plot_points(Y, color='k.')
     plot_points(Y2, color='g.')
     plot_points(Y3, color='r.')
+    plot_points(Y4, color='b.')
+    plot_points(Y6, color='y.')
+    plot_points(Y5, color='w.')
     plt.show()
     '''
     Y = numpy.load('/home/daniel/Data/mnist/outputs/train.npy')
