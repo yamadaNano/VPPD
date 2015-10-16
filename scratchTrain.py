@@ -299,9 +299,9 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
     if len(sys.argv) > 2:
-        temp = sys.argv[2]
+        temp = float(sys.argv[2])
     if len(sys.argv) > 3:
-        rw = sys.argv[3]
+        rw = float(sys.argv[3])
     main(data_root + 'ImageNetTxt/transfer.txt',
          data_root + 'ImageNetTxt/val50.txt',
          data_root + 'Experiments/bridgeScratch/T'+str(temp)+'rw'+str(rw)+'.npz',
