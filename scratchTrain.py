@@ -85,11 +85,13 @@ def main(train_file, val_file, savename, num_epochs=500, temp=1., rw=0.1,
                                     momentum=momentum)
     # Validation and testing
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
+    train_acc = T.mean(T.eq(T.argmax(prediction, axis=1), target_var),
+                      dtype=theano.config.floatX)
     test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), target_var),
                       dtype=theano.config.floatX)
     # Theano functions
     train_fn = theano.function([input_var, target_var, learning_rate],
-        loss, updates=updates)
+        [loss, train_acc], updates=updates)
     val_fn = theano.function([input_var, target_var], test_acc)
     print("Starting training...")
     # We iterate over epochs:
@@ -97,22 +99,26 @@ def main(train_file, val_file, savename, num_epochs=500, temp=1., rw=0.1,
     for epoch in range(num_epochs):
         # In each epoch, we do a full pass over the training data:
         learning_rate = get_learning_rate(epoch, margin, base)
-        train_err = 0; train_batches = 0; running_error = []
+        train_err = 0; train_batches = 0; running_error = []; running_acc = []
         trdlg = data_and_label_generator(tr_addresses, tr_labels, im_shape,
                                          mb_size, shuffle=True)
         for batch in threaded_gen(trdlg, num_cached=500):
             inputs, targets = batch
-            local_train_err = train_fn(inputs, targets, learning_rate)
-            train_err += local_train_err
+            local_train_err, local_train_acc = train_fn(inputs, targets, learning_rate)
+            train_err += local_train_err; acc += local_train_acc
             train_batches += 1
             running_error.append(local_train_err)
+            running_acc.append(local_train_acc)
+            if train_batches % 257 == 0:
+                save_errors(savename, running_error, err_type='error')
+                save_errors(savename, running_acc, err_type='acc')
+                running_error = []; running_acc = []
             h, m, s = theTime(start_time)
             sys.stdout.write('Time: %d:%02d:%02d Minibatch: %i Training Error: %f\r' %
                              (h, m, s, train_batches, train_err/train_batches)),
             sys.stdout.flush()
         print
-        save_errors(savename, running_error)
-        val_acc = 0; val_batches = 0
+        val_acc = 0; val_batches = 0; running_val_acc=[]
         vldlg = data_and_label_generator(vl_addresses, vl_labels, im_shape,
                                          mb_size)
         for batch in threaded_gen(vldlg, num_cached=50):
@@ -122,6 +128,8 @@ def main(train_file, val_file, savename, num_epochs=500, temp=1., rw=0.1,
             sys.stdout.write('Minibatch: %i Validation Accuracy: %f\r' %
                              (val_batches, val_acc/val_batches * 100)),
             sys.stdout.flush()
+        running_val_acc.append(val_acc/val_batches)
+        save_errors(savename, running_val_acc, err_type='val_acc')
         print
         print("Epoch {} of {} took {:.3f}s".format(
             epoch + 1, num_epochs, time.time() - start_time))
@@ -140,18 +148,34 @@ def theTime(start):
     h, m = divmod(m, 60)
     return (h, m, s)
 
-def save_errors(filename, running_error):
-    print('Saving runtime progress')
+def save_errors(filename, running_error, err_type='error'):
     running_error = np.asarray(running_error)
-    if os.path.isfile(filename):
-        arr = np.load(filename)['running_error']
-        running_error = np.hstack((arr, running_error))
-    np.savez(filename, running_error=running_error)
+    savename = filename.split('.')
+    savename = savename[0] + err_type + '.npz'
+    if err_type == 'error':
+        if os.path.isfile(savename):
+            arr = np.load(savename)['running_error']
+            running_error = np.hstack((arr, running_error))
+    elif err_type == 'acc':
+        if os.path.isfile(savename):
+            arr = np.load(savename)['running_error']
+            running_error = np.hstack((arr, running_error))
+    elif err_type == 'val_acc':
+        if os.path.isfile(savename):
+            arr = np.load(savename)['running_error']
+            running_error = np.hstack((arr, running_error))
+    np.savez(savename, running_error=running_error)
     fig = plt.figure()
     plt.plot(running_error)
     plt.xlabel('Iterations')
-    plt.ylabel('Error')
-    plt.savefig(filename.replace('.npz','.png'))
+    if err_type == 'error':
+        plt.ylabel('Error')
+    elif err_type == 'acc':
+        plt.ylabel('Accuracy')
+    elif err_type == 'val_acc':
+        plt.ylabel('Validation Accuracy')
+    plt.savefig(savename.replace('.npz','.png'))
+    plt.close()
 
 def regularization(prediction, temp):
     '''Return the bridge regularizer'''
