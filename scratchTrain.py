@@ -20,7 +20,7 @@ import lasagne
 from matplotlib import pyplot as plt
 # ##################### Build the neural network model #######################
 
-def build_cnn(im_shape, temp, input_var=None):
+def build_cnn(im_shape, input_var=None):
     incoming = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
                                         input_var=input_var)
     conv1 = lasagne.layers.Conv2DLayer(
