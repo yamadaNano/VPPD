@@ -304,7 +304,7 @@ if __name__ == '__main__':
         rw = sys.argv[3]
     main(data_root + 'ImageNetTxt/transfer.txt',
          data_root + 'ImageNetTxt/val50.txt',
-         data_root + 'Experiments/scratch_train.npz',
+         data_root + 'Experiments/bridgeScratch/T'+str(temp)+'rw'+str(rw)+'.npz',
          num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, rw=rw,
          temp=temp, synsets=data_root + 'ImageNetTxt/synsets.txt')
         
