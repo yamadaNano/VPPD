@@ -78,7 +78,7 @@ def main(train_file, val_file, savename, num_epochs=500, temp=1., rw=0.1,
     # Losses and updates
     prediction = lasagne.layers.get_output(network)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-    loss = loss.mean + rw*regularization(prediction, temp).mean()
+    loss = loss.mean() + rw*regularization(prediction, temp).mean()
     params = lasagne.layers.get_all_params(network, deterministic=False)
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                     learning_rate=learning_rate,
