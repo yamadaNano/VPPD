@@ -62,9 +62,10 @@ def build_cnn(im_shape, temp, input_var=None):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(train_file, val_file, savename, num_epochs=500,
+def main(train_file, val_file, savename, num_epochs=500, temp=1., rw=0.1,
          margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None):
     print("Loading data...")
+    print('Temperature: %f' % (temp,))
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
     # Variables
@@ -77,7 +78,7 @@ def main(train_file, val_file, savename, num_epochs=500,
     # Losses and updates
     prediction = lasagne.layers.get_output(network)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-    loss = loss.mean()
+    loss = loss.mean + rw*regularization(prediction, temp).mean()
     params = lasagne.layers.get_all_params(network, deterministic=False)
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                     learning_rate=learning_rate,
@@ -152,24 +153,9 @@ def save_errors(filename, running_error):
     plt.ylabel('Error')
     plt.savefig(filename.replace('.npz','.png'))
 
-# ################################ Layers #####################################
-
-class SoftermaxNonlinearity(lasagne.layers.Layer):
-    def __init__(self, incoming, temp, **kwargs):
-        super(SoftermaxNonlinearity, self).__init__(incoming, **kwargs)
-        self.temp = temp
-
-    def get_output_for(self, input, training=False, **kwargs):
-        if training:
-            R = (T.max(input,axis=1)-T.min(input,axis=1)).dimshuffle(0,'x')
-            input = self.temp*input/T.maximum(R,0.1)
-        return T.exp(input)/T.sum(T.exp(input), axis=1).dimshuffle(0,'x')
-
-def softerMax(logits, temp):
-    '''Return the softermax function'''
-    R = np.max(logits, axis=1) - np.min(logits, axis=1)
-    arg = temp*logits/np.maximum(R,0.1)[:,np.newaxis]
-    return np.exp(logits)/np.sum(np.exp(logits), axis=1)[:,np.newaxis]
+def regularization(prediction, temp):
+    '''Return the bridge regularizer'''
+    return T.sum(T.pow(prediction, 1./temp), axis=1)
 
 # ############################## Data handling ################################
 def get_traindata(srcfile, synsets=None):
@@ -306,11 +292,21 @@ def preprocess(im, num_samples, preproc=True):
 
 
 if __name__ == '__main__':
-    main('/home/daniel/Data/ImageNetTxt/transfer.txt',
-         '/home/daniel/Data/ImageNetTxt/val50.txt',
-         '/home/daniel/Data/Experiments/scratch_train.npz',
-         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9,
-         synsets='/home/daniel/Data/ImageNetTxt/synsets.txt')
+    #data_root = '/home/dworrall/Data/'
+    data_root = '/home/daniel/Data/'
+    temp = 1.
+    rw = 0.1
+    if len(sys.argv) > 1:
+        data_root = sys.argv[1]
+    if len(sys.argv) > 2:
+        temp = sys.argv[2]
+    if len(sys.argv) > 3:
+        rw = sys.argv[3]
+    main(data_root + 'ImageNetTxt/transfer.txt',
+         data_root + 'ImageNetTxt/val50.txt',
+         data_root + 'Experiments/scratch_train.npz',
+         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, rw=rw,
+         temp=temp, synsets=data_root + 'ImageNetTxt/synsets.txt')
         
         
         
