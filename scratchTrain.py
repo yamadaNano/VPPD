@@ -55,7 +55,7 @@ def build_cnn(im_shape, input_var=None):
             lasagne.layers.dropout(full6, 0.5), num_units=1000, name='full7',
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.softmax)
-    return hard
+    return full7
 
 # ############################## Main program ################################
 # Everything else will be handled in our main program now. We could pull out
