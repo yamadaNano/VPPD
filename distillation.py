@@ -92,7 +92,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
     loss = losses(soft_prediction, hard_prediction, soft_target, hard_target,
                   temp, hw, loss_type)
-    loss = regularisation(soft_prediction, (temp**2)*sort_target)
+    loss += regularisation((temp**2)*soft_target)
     params = lasagne.layers.get_all_params(network)
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                                 learning_rate=learning_rate,
@@ -229,7 +229,7 @@ def losses(soft_pred, hard_pred, soft_target, hard_target, temp_var, hw,
         sys.exit()
     return loss
 
-def regularisation(prediction, target):
+def regularisation(target):
     return T.sum(T.gammaln(target), axis=1).mean()
 
 # ############################## Data handling ################################
