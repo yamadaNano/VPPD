@@ -7,7 +7,7 @@ __contact__   = "d.worrall@cs.ucl.ac.uk"
 
 import os, sys, time
 
-alphas = [0.9, 0.99, 0.999, 0.9999, 0.99999, 1.1, 1.01, 1.001, 1.0001, 1.00001]
+alphas = [0.99999, 0.999995, 0.9999975, 1.0000025, 1.000005, 1.00001]
 for alpha in alphas:
     command = "THEANO_FLAGS='device=gpu1' python scratchTrain.py '/home/daniel/Data/' " + str(alpha)
     os.system(command)
