@@ -92,6 +92,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     _, test_prediction = lasagne.layers.get_output(network, deterministic=True)
     loss = losses(soft_prediction, hard_prediction, soft_target, hard_target,
                   temp, hw, loss_type)
+    loss = regularisation(soft_prediction, (temp**2)*sort_target)
     params = lasagne.layers.get_all_params(network)
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                                 learning_rate=learning_rate,
@@ -225,6 +226,9 @@ def losses(soft_pred, hard_pred, soft_target, hard_target, temp_var, hw,
         print('Loss type not recognised')
         sys.exit()
     return loss
+
+def regularisation(prediction, target):
+    return T.sum(T.gammaln(target), axis=1).mean()
 
 # ############################## Data handling ################################
 def get_metadata(srcfile):
@@ -438,11 +442,11 @@ if __name__ == '__main__':
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'originalLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/distillation2/T' + str(temp) +'.npz',
+         savename = data_root + 'Experiments/normalization/T' + str(temp) +'.npz',
          num_epochs=50, margin=25, base=base, mb_size=50, momentum=0.9,
          temp=temp, loss_type=loss_type, hw=0.1, preproc=True,
          synsets=data_root +'ImageNetTxt/synsets.txt',
-         modelFile= data_root + 'Experiments/distillation2/T' + str(int(temp)) + '.pkl')
+         modelFile= data_root + 'Experiments/normalization/T' + str(int(temp)) + '.pkl')
 # Savename codes
 # N1-ML-(n)DA.npz
 # Network 1,2,3...
