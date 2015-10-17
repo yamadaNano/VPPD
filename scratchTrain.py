@@ -7,6 +7,10 @@ __contact__   = "d.worrall@cs.ucl.ac.uk"
 
 import os, sys, time
 
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
+
 import cPickle
 import cv2
 import numpy as np
@@ -16,8 +20,6 @@ import theano
 import theano.tensor as T
 
 import lasagne
-
-from matplotlib import pyplot as plt
 # ##################### Build the neural network model #######################
 
 def build_cnn(im_shape, input_var=None):
