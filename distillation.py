@@ -125,6 +125,8 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
             running_error.append(local_train_err); running_acc.append(acc)
             h, m, s = theTime(start_time)
             train_batches += 1
+            if numpy.isnan(local_train_err):
+                sys.exit()
             if train_batches % 257 == 0:
                 save_errors(savename, running_error, err_type='error')
                 save_errors(savename, running_acc, err_type='acc')
