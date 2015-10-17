@@ -108,6 +108,8 @@ def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
             local_train_err, local_train_acc = train_fn(inputs, targets, learning_rate)
             train_err += local_train_err; acc += local_train_acc
             train_batches += 1
+            if numpy.isnan(local_train_err):
+                sys.exit()
             running_error.append(local_train_err)
             running_acc.append(local_train_acc)
             if train_batches % 257 == 0:
