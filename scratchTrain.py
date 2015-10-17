@@ -62,10 +62,10 @@ def build_cnn(im_shape, input_var=None):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(train_file, val_file, savename, num_epochs=500, temp=1., rw=0.1,
+def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
          margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None):
     print("Loading data...")
-    print('Temperature: %f' % (temp,))
+    print('Alpha: %f' % (alpha,))
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
     # Variables
@@ -78,7 +78,7 @@ def main(train_file, val_file, savename, num_epochs=500, temp=1., rw=0.1,
     # Losses and updates
     prediction = lasagne.layers.get_output(network)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-    loss = loss.mean() + rw*regularization(prediction, temp).mean()
+    loss = loss.mean() + regularization(prediction, alpha).mean()
     params = lasagne.layers.get_all_params(network, deterministic=False)
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                     learning_rate=learning_rate,
@@ -178,9 +178,9 @@ def save_errors(filename, running_error, err_type='error'):
     plt.savefig(savename.replace('.npz','.png'))
     plt.close()
 
-def regularization(prediction, temp):
+def regularization(prediction, alpha):
     '''Return the bridge regularizer'''
-    return T.sum(T.pow(prediction, 1./temp), axis=1)
+    return -T.sum((alpha-1)*T.log(prediction), axis=1)
 
 # ############################## Data handling ################################
 def get_traindata(srcfile, synsets=None):
@@ -320,19 +320,17 @@ def preprocess(im, num_samples, preproc=True):
 if __name__ == '__main__':
     #data_root = '/home/dworrall/Data/'
     data_root = '/home/daniel/Data/'
-    temp = 1.
-    rw = 0.1
+    alpha = 0.9
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
     if len(sys.argv) > 2:
-        temp = float(sys.argv[2])
-    if len(sys.argv) > 3:
-        rw = float(sys.argv[3])
+        alpha_txt = sys.argv[2]
+        alpha = float(sys.argv[2])
     main(data_root + 'ImageNetTxt/transfer.txt',
          data_root + 'ImageNetTxt/val50.txt',
-         data_root + 'Experiments/bridgeScratch/T'+str(temp)+'rw'+str(rw)+'.npz',
-         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9, rw=rw,
-         temp=temp, synsets=data_root + 'ImageNetTxt/synsets.txt')
+         data_root + 'Experiments/alpha/a'+alpha_txt+'.npz',
+         num_epochs=50, margin=25, base=0.01, mb_size=50, momentum=0.9,
+         alpha=alpha, synsets=data_root + 'ImageNetTxt/synsets.txt')
         
         
         
