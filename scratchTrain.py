@@ -153,8 +153,8 @@ def theTime(start):
 
 def save_errors(filename, running_error, err_type='error'):
     running_error = np.asarray(running_error)
-    savename = filename.split('.')
-    savename = savename[0] + err_type + '.npz'
+    savename = filename.replace('.npz','')
+    savename = savename + err_type + '.npz'
     if err_type == 'error':
         if os.path.isfile(savename):
             arr = np.load(savename)['running_error']
