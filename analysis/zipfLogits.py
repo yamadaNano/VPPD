@@ -60,7 +60,7 @@ def plotConcentrations():
     plt.show()
 
 if __name__ == '__main__':
-    plotConcentrations()
+    zipfPlot()
     
     
     

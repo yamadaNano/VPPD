@@ -317,7 +317,7 @@ def distillation_generator(addresses, logit_folder, im_shape, mb_size,
             line = addresses[idx].rstrip('\n')
             images.append(load_image(line, im_shape, preproc))
             # Load logits
-            base = os.path.basename(line).replace('.npy','.npz')
+            base = os.path.basename(line).replace('.npy','.npz.npy')
             target = load_distil(base, logit_folder, temp)
             soft.append(target)
             hard.append(pairs[base.split('_')[0]])
@@ -344,7 +344,7 @@ def load_target(base, logit_folder, k):
 def load_distil(base, logit_folder, temp):
     '''Return the target in appropriate format''' 
     logit_address = logit_folder + '/' + base
-    logits = np.load(logit_address)['arr_0']
+    logits = np.log(np.load(logit_address)) #['arr_0']
     soft_target = np.mean(nl.distill(logits, temp), axis=0)
     return soft_target[np.newaxis,:]
 
@@ -424,9 +424,10 @@ def preprocess(im, num_samples, preproc=True):
 if __name__ == '__main__':
     #data_root = '/home/dworrall/Data/'
     data_root = '/home/daniel/Data/'
-    temp = 1
+    temp = 10
     loss_type = 'crossentropy'
     base = 0.01
+    topK = 5
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
     if len(sys.argv) > 2:
@@ -435,14 +436,16 @@ if __name__ == '__main__':
         loss_type = sys.argv[3]
     if len(sys.argv) > 4:
         base = float(sys.argv[4])
+    if len(sys.argv) > 5:
+        topK = sys.argv[5]
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
-         logit_folder = data_root + 'originalLogits/LogitsMean',
+         logit_folder = data_root + 'targets/clippedTargets/LogitsMean' + topK,
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/distillation2/T' + str(temp) +'.npz',
+         savename = data_root + 'Experiments/topK/top' + topK +'.npz',
          num_epochs=50, margin=25, base=base, mb_size=50, momentum=0.9,
          temp=temp, loss_type=loss_type, hw=0.1, preproc=True,
          synsets=data_root +'ImageNetTxt/synsets.txt',
-         modelFile= data_root + 'Experiments/distillation2/T' + str(int(temp)) + '.pkl')
+         modelFile= data_root + 'Experiments/topK/top' + topK +'.npz',)
 # Savename codes
 # N1-ML-(n)DA.npz
 # Network 1,2,3...

@@ -108,6 +108,7 @@ def circularErrors(n=10, r=0.1):
     return y + bary_errors #errors
 
 if __name__ == '__main__':
+    '''
     Y = getRN()
     Y2 = getLocus()
     Y3 = circularErrors(n=100, r=0.1)
@@ -126,8 +127,17 @@ if __name__ == '__main__':
     '''
     Y = numpy.load('/home/daniel/Data/mnist/outputs/train.npy')
     for t in numpy.arange(50, step=1):
+        L = 10.
+        a = t/(t+L)
+        b = L/(t+L)
+        h = numpy.zeros(Y.shape)
+        maxes = numpy.argmax(Y, axis=1)
+        maxes = numpy.ravel_multi_index((numpy.arange(maxes.shape[0]), maxes), (maxes.shape[0], 3))
+        numpy.put(h, maxes, 1)
+        Ys = a*softmax(numpy.log(Y)/(t+1.)) + b*h
         Yt = softmax(numpy.log(Y)/(t+1.))
         plot_points(Yt, color='r.')
+        plot_points(Ys, color='b.')
         plt.ion()
         print t+1.
         raw_input('ENTER')
@@ -135,7 +145,7 @@ if __name__ == '__main__':
         #plot_points(Y2, color='g.')
         #plot_points(Y3, color='r.')
         plt.show()
-    '''    
+        
 
 
 
