@@ -1,4 +1,4 @@
-'''Execute distillation experiments'''
+'''Execute alpha regularization experiments'''
 
 __authors__   = "Daniel Worrall"
 __copyright__ = "(c) 2015, University College London"
