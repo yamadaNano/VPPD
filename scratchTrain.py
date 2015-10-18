@@ -351,9 +351,9 @@ def clipped_nesterov_momentum(loss_or_grads, params, learning_rate, max_grad, mo
         velocity = theano.shared(np.zeros(value.shape, dtype=value.dtype),
                                  broadcastable=param.broadcastable)
         v = momentum * velocity - learning_rate * grad
+        dparam = momentum*v - learning_rate*grad
         updates[velocity] = v
-        dparam = lasagne.updates.norm_constraint(
-            momentum*v - learning_rate*grad, max_grad, norm_axes=(1,))
+        dparam = lasagne.updates.norm_constraint(dparam, max_grad, norm_axes=(1,))
         updates[param] = param + dparam
     return updates
 
