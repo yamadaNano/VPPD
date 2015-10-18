@@ -68,6 +68,7 @@ def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
          margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None):
     print("Loading data...")
     print('Alpha: %f' % (alpha,))
+    print('Save name: %s' % (savename,))
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
     N = len(tr_addresses)
