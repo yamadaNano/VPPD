@@ -79,6 +79,7 @@ def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
     target_var = T.ivector('targets')
     learning_rate = T.fscalar('learning_rate')
     im_shape = (227, 227)
+    max_grad = 1.
     print("Building model and compiling functions...")
     network = build_cnn(im_shape, input_var=input_var)
     # Losses and updates
@@ -86,9 +87,11 @@ def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
     loss = loss.mean() + regularization(prediction, alpha/N).mean()
     params = lasagne.layers.get_all_params(network, deterministic=False)
-    updates = lasagne.updates.nesterov_momentum(loss, params,
-                                    learning_rate=learning_rate,
-                                    momentum=momentum)
+    #updates = lasagne.updates.nesterov_momentum(loss, params,
+    #                                learning_rate=learning_rate,
+    #                                momentum=momentum)
+    updates = clipped_nesterov_momentum(loss, params, learning_rate, max_grad,
+                                        momentum=momentum)
     # Validation and testing
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     train_acc = T.mean(T.eq(T.argmax(prediction, axis=1), target_var),
@@ -323,6 +326,36 @@ def preprocess(im, num_samples, preproc=True):
     else:
         img = (im,)*num_samples
     return np.dstack(img)
+
+# ################################## Updates ###################################
+#from collections import OrderedDict
+#from lasagne import utils
+
+def get_or_compute_grads(loss_or_grads, params):
+    """Helper function returning a list of gradients"""
+    if isinstance(loss_or_grads, list):
+        if not len(loss_or_grads) == len(params):
+            raise ValueError("Got %d gradient expressions for %d parameters" %
+                             (len(loss_or_grads), len(params)))
+        return loss_or_grads
+    else:
+        return theano.grad(loss_or_grads, params)
+
+def clipped_nesterov_momentum(loss_or_grads, params, learning_rate, max_grad, momentum=0.9):
+    """Returns a modified update dictionary including Nesterov momentum"""
+    grads = get_or_compute_grads(loss_or_grads, params)
+    updates = OrderedDict()
+
+    for param, grad in zip(params, grads):
+        value = param.get_value(borrow=True)
+        velocity = theano.shared(np.zeros(value.shape, dtype=value.dtype),
+                                 broadcastable=param.broadcastable)
+        v = momentum * velocity - learning_rate * grad
+        updates[velocity] = v
+        dparam = lasagne.updates.norm_constraint(
+            momentum*v - learning_rate*grad, max_grad)
+        updates[param] = param + dparam
+    return updates
 
 
 if __name__ == '__main__':
