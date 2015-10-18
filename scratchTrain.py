@@ -328,7 +328,7 @@ def preprocess(im, num_samples, preproc=True):
     return np.dstack(img)
 
 # ################################## Updates ###################################
-#from collections import OrderedDict
+from collections import OrderedDict
 #from lasagne import utils
 
 def get_or_compute_grads(loss_or_grads, params):
