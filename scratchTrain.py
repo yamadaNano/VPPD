@@ -353,7 +353,7 @@ def clipped_nesterov_momentum(loss_or_grads, params, learning_rate, max_grad, mo
         v = momentum * velocity - learning_rate * grad
         updates[velocity] = v
         dparam = lasagne.updates.norm_constraint(
-            momentum*v - learning_rate*grad, max_grad)
+            momentum*v - learning_rate*grad, max_grad, norm_axes=(1,))
         updates[param] = param + dparam
     return updates
 
