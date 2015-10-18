@@ -72,7 +72,7 @@ def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
     vl_addresses, vl_labels = get_valdata(val_file)
     N = len(tr_addresses)
     print('Num training examples: %i' % (N,))
-    print('Alpha/N: %f' % (alpha/N,))
+    print('Alpha/N: %03f' % (alpha/N,))
     # Variables
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
@@ -187,7 +187,7 @@ def save_errors(filename, running_error, err_type='error'):
 
 def regularization(prediction, alpha):
     '''Return the bridge regularizer'''
-    return -T.sum((alpha-1)*T.log(prediction), axis=1)
+    return -T.sum((alpha)*T.log(prediction), axis=1)
 
 # ############################## Data handling ################################
 def get_traindata(srcfile, synsets=None):
