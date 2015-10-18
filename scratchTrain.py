@@ -73,7 +73,7 @@ def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
     vl_addresses, vl_labels = get_valdata(val_file)
     N = len(tr_addresses)
     print('Num training examples: %i' % (N,))
-    print('Alpha/N: %03f' % (alpha/N,))
+    print('Alpha/N: %e' % (alpha/N,))
     # Variables
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
