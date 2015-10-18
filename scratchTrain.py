@@ -70,6 +70,9 @@ def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
     print('Alpha: %f' % (alpha,))
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
+    N = len(tr_addresses)
+    print('Num training examples: %i' % (N,))
+    print('Alpha/N: %f' % (alpha/N,))
     # Variables
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
@@ -80,7 +83,7 @@ def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
     # Losses and updates
     prediction = lasagne.layers.get_output(network)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-    loss = loss.mean() + regularization(prediction, alpha).mean()
+    loss = loss.mean() + regularization(prediction, alpha/N).mean()
     params = lasagne.layers.get_all_params(network, deterministic=False)
     updates = lasagne.updates.nesterov_momentum(loss, params,
                                     learning_rate=learning_rate,
