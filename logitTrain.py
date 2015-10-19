@@ -211,17 +211,20 @@ if __name__ == '__main__':
     data_root = '/home/daniel/Data/'
     loss_type = 'crossentropy'
     bridgecoeff = 1.
+    base = 1e-3
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
     if len(sys.argv) > 2:
         loss_type = sys.argv[2]
     if len(sys.argv) > 3:
         bridgecoeff = float(sys.argv[3])
+    if len(sys.argv) > 4:
+        base = float(sys.argv[4])
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'targets/combinedTargets/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
          savename = data_root + 'Experiments/bridgecoeff/T10_0p8.npz',
-         num_epochs=50, margin=25, base=1e-3, mb_size=50, momentum=0.9,
+         num_epochs=50, margin=25, base=base, mb_size=50, momentum=0.9,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt',
          bridgecoeff=bridgecoeff)
         

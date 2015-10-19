@@ -54,7 +54,7 @@ def build_cnn(im_shape, input_var=None):
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     full7 = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(full6, 0.5), num_units=1000, name='full7',
+            lasagne.layers.dropout(full6, 0.5), num_units=50, name='full7',
             W=lasagne.init.HeUniform(), b=lasagne.init.Constant(0.01),
             nonlinearity=lasagne.nonlinearities.softmax)
     return full7
@@ -64,13 +64,16 @@ def build_cnn(im_shape, input_var=None):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
+def main(train_file, val_file, savename, synmap_file, num_epochs=500, alpha=0.1,
          margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None):
     print("Loading data...")
     print('Alpha: %f' % (alpha,))
     print('Save name: %s' % (savename,))
     tr_addresses, tr_labels = get_traindata(train_file, synsets)
     vl_addresses, vl_labels = get_valdata(val_file)
+    synmap = get_synmap(synmap_file)
+    tr_labels = map_labels(tr_labels, synmap)
+    vl_labels = map_labels(vl_labels, synmap)
     N = len(tr_addresses)
     print('Num training examples: %i' % (N,))
     print('Alpha/N: %e' % (alpha/N,))
@@ -220,6 +223,21 @@ def get_valdata(srcfile):
         labels.append(label)
     return (addresses, labels)
 
+def get_synmap(srcfile):
+    '''get the synmap data'''
+    synmap = {}
+    with open(srcfile, 'r') as fp:
+        lines = fp.readlines()
+    for line in lines:
+        dst, src = line.rstrip('\n').split(' ')
+        synmap[str(src)] = int(dst)
+    return synmap
+
+def map_labels(labels, synmap):
+    for i in np.arange(len(labels)):
+        labels[i] = synmap[str(labels[i])]
+    return labels
+
 def data_and_label_generator(addresses, labels, im_shape, mb_size, shuffle=False):
     '''Get images and pair up with logits'''
     order = ordering(len(addresses), shuffle=shuffle)
@@ -361,9 +379,10 @@ def clipped_nesterov_momentum(loss_or_grads, params, learning_rate, max_grad, mo
 if __name__ == '__main__':
     #data_root = '/home/dworrall/Data/'
     data_root = '/home/daniel/Data/'
-    alpha = 0.9
-    base = 1e-2
-    directory = 'alpha'
+    alpha = -1e-1
+    alpha_txt = str(-1e-1)
+    base = 1e-3
+    directory = 'alpha3'
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
     if len(sys.argv) > 2:
@@ -376,6 +395,7 @@ if __name__ == '__main__':
     main(data_root + 'ImageNetTxt/transfer.txt',
          data_root + 'ImageNetTxt/val50.txt',
          data_root + 'Experiments/' + directory + '/a'+alpha_txt+'.npz',
+         data_root + 'ImageNetTxt/synmap.txt',
          num_epochs=50, margin=25, base=base, mb_size=50, momentum=0.9,
          alpha=alpha, synsets=data_root + 'ImageNetTxt/synsets.txt')
         
