@@ -64,7 +64,7 @@ def build_cnn(im_shape, input_var=None):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
+def main(train_file, val_file, savename, modelFile, num_epochs=500, alpha=0.1,
          margin=25, base=0.01, mb_size=50, momentum=0.9, synsets=None):
     print("Loading data...")
     print('Alpha: %f' % (alpha,))
@@ -147,8 +147,20 @@ def main(train_file, val_file, savename, num_epochs=500, alpha=0.1,
             epoch + 1, num_epochs, time.time() - start_time))
         print("  train loss:\t\t{:.6f}".format(train_err / train_batches))
         print("  valid acc:\t\t{:.6f}".format(val_acc / val_batches * 100.))
+        save_model(network, modelFile)
 
 # ################################ Helpers ####################################
+
+def save_model(model, file_name):
+    '''Save the model parameters'''
+    print('Saving model..')
+    params = {}
+    for param in lasagne.layers.get_all_params(model):
+        params[str(param)] = param.get_value()
+    
+    file = open(file_name, 'w')
+    cPickle.dump(params, file, cPickle.HIGHEST_PROTOCOL)
+    file.close()
 
 def get_learning_rate(epoch, margin, base):
     return base*margin/np.maximum(epoch,margin)
@@ -376,6 +388,7 @@ if __name__ == '__main__':
     main(data_root + 'ImageNetTxt/transfer.txt',
          data_root + 'ImageNetTxt/val50.txt',
          data_root + 'Experiments/' + directory + '/a'+alpha_txt+'.npz',
+         data_root + 'Experiments/' + directory + '/model'+alpha_txt+'.npz',
          num_epochs=50, margin=25, base=base, mb_size=50, momentum=0.9,
          alpha=alpha, synsets=data_root + 'ImageNetTxt/synsets.txt')
         
