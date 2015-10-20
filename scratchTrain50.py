@@ -72,9 +72,9 @@ def main(train_file, val_file, savename, synmap_file, num_epochs=500, alpha=0.1,
     print('Save name: %s' % (savename,))
     tr_addresses, tr_labels = hd.get_traindata(train_file, synsets)
     vl_addresses, vl_labels = hd.get_valdata(val_file)
-    synmap = get_synmap(synmap_file)
-    tr_labels = map_labels(tr_labels, synmap)
-    vl_labels = map_labels(vl_labels, synmap)
+    synmap = hd.get_synmap(synmap_file)
+    tr_labels = hd.map_labels(tr_labels, synmap)
+    vl_labels = hd.map_labels(vl_labels, synmap)
     N = len(tr_addresses)
     print('Num training examples: %i' % (N,))
     print('Alpha/N: %e' % (alpha/N,))
@@ -196,23 +196,6 @@ def save_errors(filename, running_error, err_type='error'):
 def regularization(prediction, alpha):
     '''Return the bridge regularizer'''
     return -T.sum((alpha)*T.log(prediction), axis=1)
-
-# ############################## Data handling ################################
-def get_synmap(srcfile):
-    '''get the synmap data'''
-    synmap = {}
-    with open(srcfile, 'r') as fp:
-        lines = fp.readlines()
-    for line in lines:
-        dst, src = line.rstrip('\n').split(' ')
-        synmap[str(src)] = int(dst)
-    return synmap
-
-def map_labels(labels, synmap):
-    for i in np.arange(len(labels)):
-        labels[i] = synmap[str(labels[i])]
-    return labels
-
 
 # ################################## Updates ###################################
 from collections import OrderedDict

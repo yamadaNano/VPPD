@@ -167,6 +167,21 @@ def get_synsets(synsets):
             pairs[syn.rstrip('\n')] = i 
     return pairs
 
+def get_synmap(srcfile):
+    '''get the synmap data'''
+    synmap = {}
+    with open(srcfile, 'r') as fp:
+        lines = fp.readlines()
+    for line in lines:
+        dst, src = line.rstrip('\n').split(' ')
+        synmap[str(src)] = int(dst)
+    return synmap
+
+def map_labels(labels, synmap):
+    for i in np.arange(len(labels)):
+        labels[i] = synmap[str(labels[i])]
+    return labels
+
 def caffe_load_image(filename, color=True):
     '''Load an image converting from grayscale or alpha as needed.'''
     im = skimage.img_as_float(skio.imread(filename)).astype(theano.config.floatX)

@@ -77,9 +77,9 @@ def main(train_file, logit_folder, val_file, savename, synmap_file, mb_size=50,
     print("Loading data...")
     tr_addresses, tr_labels = hd.get_traindata(train_file, synsets)
     vl_addresses, vl_labels = hd.get_valdata(val_file)
-    synmap = get_synmap(synmap_file)
-    tr_labels = map_labels(tr_labels, synmap)
-    vl_labels = map_labels(vl_labels, synmap)
+    synmap = hd.get_synmap(synmap_file)
+    tr_labels = hd.map_labels(tr_labels, synmap)
+    vl_labels = hd.map_labels(vl_labels, synmap)
     # Variables
     input_var = T.tensor4('inputs')
     im_shape = (227, 227)
