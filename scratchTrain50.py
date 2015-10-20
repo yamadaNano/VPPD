@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 
 import cPickle
 import cv2
+import handling as hd
 import numpy as np
 import skimage
 import skimage.io as skio
@@ -69,8 +70,8 @@ def main(train_file, val_file, savename, synmap_file, num_epochs=500, alpha=0.1,
     print("Loading data...")
     print('Alpha: %f' % (alpha,))
     print('Save name: %s' % (savename,))
-    tr_addresses, tr_labels = get_traindata(train_file, synsets)
-    vl_addresses, vl_labels = get_valdata(val_file)
+    tr_addresses, tr_labels = hd.get_traindata(train_file, synsets)
+    vl_addresses, vl_labels = hd.get_valdata(val_file)
     synmap = get_synmap(synmap_file)
     tr_labels = map_labels(tr_labels, synmap)
     vl_labels = map_labels(vl_labels, synmap)
@@ -113,8 +114,8 @@ def main(train_file, val_file, savename, synmap_file, num_epochs=500, alpha=0.1,
         learning_rate = get_learning_rate(epoch, margin, base)
         train_err = 0; train_batches = 0; running_error = []; running_acc = []
         acc = 0.
-        trdlg = data_and_label_generator(tr_addresses, tr_labels, im_shape,
-                                         mb_size, shuffle=True)
+        trdlg = hd.data_and_label_generator(tr_addresses, tr_labels, im_shape,
+                                            mb_size, shuffle=True, preproc=True)
         for batch in threaded_gen(trdlg, num_cached=500):
             inputs, targets = batch
             local_train_err, local_train_acc = train_fn(inputs, targets, learning_rate)
@@ -134,8 +135,8 @@ def main(train_file, val_file, savename, synmap_file, num_epochs=500, alpha=0.1,
             sys.stdout.flush()
         print
         val_acc = 0; val_batches = 0; running_val_acc=[]
-        vldlg = data_and_label_generator(vl_addresses, vl_labels, im_shape,
-                                         mb_size)
+        vldlg = hd.data_and_label_generator(vl_addresses, vl_labels, im_shape,
+                                            mb_size, shuffle=False, preproc=False)
         for batch in threaded_gen(vldlg, num_cached=50):
             inputs, targets = batch
             val_acc += val_fn(inputs, targets)
@@ -197,32 +198,6 @@ def regularization(prediction, alpha):
     return -T.sum((alpha)*T.log(prediction), axis=1)
 
 # ############################## Data handling ################################
-def get_traindata(srcfile, synsets=None):
-    '''Get the training data'''
-    addresses = []; labels = []
-    with open(srcfile, 'r') as fp:
-        lines = fp.readlines()
-    pairs = get_synsets(synsets)
-    for line in lines:
-        address = line.rstrip('\n')
-        addresses.append(address)
-        if pairs is not None:
-            label = pairs[os.path.basename(address).split('_')[0]]
-            labels.append(label)
-    return (addresses, labels)
-
-def get_valdata(srcfile):
-    '''Get the validation data'''
-    addresses = []; labels = []
-    with open(srcfile, 'r') as fp:
-        lines = fp.readlines()
-    for line in lines:
-        address, label = line.rstrip('\n').split(' ')
-        label = np.int_(label)
-        addresses.append(address)
-        labels.append(label)
-    return (addresses, labels)
-
 def get_synmap(srcfile):
     '''get the synmap data'''
     synmap = {}
@@ -238,112 +213,6 @@ def map_labels(labels, synmap):
         labels[i] = synmap[str(labels[i])]
     return labels
 
-def data_and_label_generator(addresses, labels, im_shape, mb_size, shuffle=False):
-    '''Get images and pair up with logits'''
-    order = ordering(len(addresses), shuffle=shuffle)
-    batches = np.array_split(order, np.ceil(len(addresses)/(1.*mb_size)))
-    for batch in batches:
-        images = []; targets = []
-        for idx in batch:
-            # Load image
-            line = addresses[idx].rstrip('\n')
-            #image = cv2.resize(caffe_load_image(line), im_shape)
-            #image = preprocess(image, 1, preproc=False)
-            image = np.load(line)
-            images.append(image)
-            targets.append(labels[idx])
-        im = np.dstack(images)
-        im = np.transpose(im, (2,1,0)).reshape(-1,3,im_shape[0],im_shape[1])
-        output = np.hstack(targets).astype(np.int32)
-        # Really need to add some kind of preprocessing
-        yield (im, output)
-
-def load_image(address, im_shape, preproc=False):
-    '''Return image in appropriate format'''
-    image = cv2.resize(caffe_load_image(address), im_shape)
-    return preprocess(image, 1, preproc=preproc)
-
-def load_target(base, logit_folder, temp, pairs):
-    '''Return the target in appropriate format''' 
-    logit_address = logit_folder + '/' + base
-    logits = np.load(logit_address)['arr_0']
-    soft_target = np.mean(softerMax(logits, temp), axis=0)
-    if pairs is not None:
-        hard_target_idx = pairs[base.split('_')[0]]
-        soft_target[hard_target_idx] += 1
-        soft_target = soft_target/2.
-    return soft_target[np.newaxis,:]
-
-def ordering(num, shuffle=False):
-    '''Return a possible random ordering'''
-    order = np.arange(num)
-    if shuffle:
-        np.random.shuffle(order)
-    return order
-
-def get_synsets(synsets):
-    '''Return a dictionary with the synset mappings'''
-    pairs = None
-    if synsets is not None:
-        pairs = {}
-        with open(synsets, 'r') as sp:
-            syns = sp.readlines()
-        for i, syn in enumerate(syns):
-            pairs[syn.rstrip('\n')] = i 
-    return pairs
-
-def caffe_load_image(filename, color=True):
-    '''Load an image converting from grayscale or alpha as needed.'''
-    im = skimage.img_as_float(skio.imread(filename)).astype(theano.config.floatX)
-    if im.ndim == 2:
-        im = im[:, :, np.newaxis]
-        if color:
-            im = np.tile(im, (1, 1, 3))
-    elif im.shape[2] == 4:
-        im = im[:, :, :3]
-    return im
-
-def threaded_gen(generator, num_cached=50):
-    '''Threaded generator to multithread the data loading pipeline'''
-    import Queue
-    queue = Queue.Queue(maxsize=num_cached)
-    sentinel = object()  # guaranteed unique reference
-
-    # define producer (putting items into queue)
-    def producer():
-        for item in generator:
-            queue.put(item)
-        queue.put(sentinel)
-
-    # start producer (in a background thread)
-    import threading
-    thread = threading.Thread(target=producer)
-    thread.daemon = True
-    thread.start()
-
-    # run as consumer (read items from queue, in current thread)
-    item = queue.get()
-    while item is not sentinel:
-        yield item
-        queue.task_done()
-        item = queue.get()
-        
-# ############################ Data preprocessing #############################
-def preprocess(im, num_samples, preproc=True):
-    '''Data normalizations and augmentations'''
-    if preproc == True:
-        img = []
-        for i in np.arange(num_samples):
-        # Random rotations
-            angle = np.random.rand() * 360.
-            M = cv2.getRotationMatrix2D((im.shape[1]/2,im.shape[0]/2), angle, 1)
-            img.append(cv2.warpAffine(im, M, (im.shape[1],im.shape[0])))
-            # Random fliplr
-            if np.random.rand() > 0.5:
-                img[i] = img[i][:,::-1,...]
-    else:
-        img = (im,)*num_samples
-    return np.dstack(img)
 
 # ################################## Updates ###################################
 from collections import OrderedDict
@@ -381,8 +250,8 @@ if __name__ == '__main__':
     data_root = '/home/daniel/Data/'
     alpha = -1e-1
     alpha_txt = str(-1e-1)
-    base = 1e-3
-    directory = 'alpha3'
+    base = 1e-2
+    directory = 'alphaPreprocessed'
     if len(sys.argv) > 1:
         data_root = sys.argv[1]
     if len(sys.argv) > 2:

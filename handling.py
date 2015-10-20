@@ -55,9 +55,10 @@ def get_valdata(srcfile):
         labels.append(label)
     return (addresses, labels)
 
-def data_and_label_generator(addresses, labels, im_shape, mb_size):
+def data_and_label_generator(addresses, labels, im_shape, mb_size,
+                             shuffle=True, preproc=False):
     '''Get images and pair up with logits'''
-    order = ordering(len(addresses), shuffle=False)
+    order = ordering(len(addresses), shuffle=shuffle)
     batches = np.array_split(order, np.ceil(len(addresses)/(1.*mb_size)))
     for batch in batches:
         images = []; targets = []
@@ -66,7 +67,7 @@ def data_and_label_generator(addresses, labels, im_shape, mb_size):
             line = addresses[idx].rstrip('\n')
             #image = cv2.resize(caffe_load_image(line), im_shape)
             image = np.load(line).astype(theano.config.floatX)
-            image = preprocess(image, 1, preproc=False)
+            image = preprocess(image, 1, preproc=preproc)
             images.append(image)
             targets.append(labels[idx])
         im = np.dstack(images)
