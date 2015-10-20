@@ -93,7 +93,7 @@ def main(train_file, logit_folder, val_file, savename, synmap_file, mb_size=50,
     # In each epoch, we do a full pass over the training data:
     train_batches = 0
     t_acc = 0; running_acc = []
-    trdlg = data_and_label_generator(addresses, labels, im_shape, mb_size,
+    trdlg = hd.data_and_label_generator(addresses, labels, im_shape, mb_size,
                                      shuffle=False, preproc=preproc)
     for batch in hd.threaded_gen(trdlg, num_cached=500):
         inputs, _, _ = batch
