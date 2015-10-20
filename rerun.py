@@ -85,7 +85,7 @@ def main(train_file, logit_folder, val_file, savename, synmap_file, mb_size=50,
     im_shape = (227, 227)
     print("Building model and compiling functions...")
     network = reload_cnn(im_shape, modelFile, input_var=input_var)
-    _, test_prediction = lasagne.layers.get_output(network, deterministic=deterministic)
+    test_prediction = lasagne.layers.get_output(network, deterministic=deterministic)
     # Theano functions
     fn = theano.function([input_var], test_prediction)
     print("Starting training...")
