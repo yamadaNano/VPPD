@@ -156,7 +156,7 @@ if __name__ == '__main__':
          savename = data_root + 'Experiments/trainRetrain/OP',
          synmap_file = data_root + 'ImageNetTxt/synmap.txt',
          mb_size=50, preproc=False, synsets=data_root +'ImageNetTxt/synsets.txt',
-         modelFile= data_root + 'Experiments/alpha-3b/model0.pkl',
+         modelFile= data_root + 'Experiments/alpha-3b/model0.npz',
          deterministic = True)
 
         
