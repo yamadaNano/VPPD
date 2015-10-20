@@ -59,7 +59,7 @@ def reload_cnn(im_shape, filename, input_var=None):
             W=params['full6.W'], b=params['full6.b'],
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     full7 = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(full6, 0.5), num_units=50, name='full7',
+            lasagne.layers.dropout(full6, 0.5), num_units=1000, name='full7',
             W=params['full7.W'], b=params['full7.b'],
             nonlinearity=lasagne.nonlinearities.softmax)
     
@@ -77,9 +77,9 @@ def main(train_file, logit_folder, val_file, savename, synmap_file, mb_size=50,
     print("Loading data...")
     tr_addresses, tr_labels = hd.get_traindata(train_file, synsets)
     vl_addresses, vl_labels = hd.get_valdata(val_file)
-    synmap = hd.get_synmap(synmap_file)
-    tr_labels = hd.map_labels(tr_labels, synmap)
-    vl_labels = hd.map_labels(vl_labels, synmap)
+    #synmap = hd.get_synmap(synmap_file)
+    #tr_labels = hd.map_labels(tr_labels, synmap)
+    #vl_labels = hd.map_labels(vl_labels, synmap)
     # Variables
     input_var = T.tensor4('inputs')
     im_shape = (227, 227)
