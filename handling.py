@@ -75,6 +75,26 @@ def data_and_label_generator(addresses, labels, im_shape, mb_size,
         output = np.hstack(targets).astype(np.int32)
         yield (im, output)
 
+def data_label_name_generator(addresses, labels, im_shape, mb_size,
+                              shuffle=True, preproc=False):
+    '''Get images and pair up with logits'''
+    order = ordering(len(addresses), shuffle=shuffle)
+    batches = np.array_split(order, np.ceil(len(addresses)/(1.*mb_size)))
+    for batch in batches:
+        images = []; targets = []; names = []
+        for idx in batch:
+            # Load image
+            line = addresses[idx].rstrip('\n')
+            image = np.load(line).astype(theano.config.floatX)
+            image = preprocess(image, 1, preproc=preproc)
+            images.append(image)
+            targets.append(labels[idx])
+            names.append(os.path.basename(line))
+        im = np.dstack(images)
+        im = np.transpose(im, (2,1,0)).reshape(-1,3,im_shape[0],im_shape[1])
+        output = np.hstack(targets).astype(np.int32)
+        yield (im, output, names)
+
 def data_logit_label_generator(addresses, logit_folder, im_shape, mb_size,
                                k=1, preproc=False, shuffle=True, synsets=None):
     '''Get images and pair up with logits'''

@@ -70,7 +70,7 @@ def reload_cnn(im_shape, filename, input_var=None):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(train_file, logit_folder, val_file, savename, synmap_file, mb_size=50,
+def main(train_file, logit_folder, val_file, savename, synmap_file, mb_size=1,
          preproc=False, synsets=None, deterministic=True,
          modelFile='./myModel.pkl'):
     print('Model file: %s' % (modelFile,))
@@ -93,15 +93,15 @@ def main(train_file, logit_folder, val_file, savename, synmap_file, mb_size=50,
     # In each epoch, we do a full pass over the training data:
     train_batches = 0
     t_acc = 0; running_acc = []
-    trdlg = hd.data_and_label_generator(tr_addresses, tr_labels, im_shape,
-                                        mb_size, shuffle=False, preproc=preproc)
+    trdlg = hd.data_label_name_generator(tr_addresses, tr_labels, im_shape,
+                                         mb_size, shuffle=False, preproc=preproc)
     for batch in hd.threaded_gen(trdlg, num_cached=500):
-        inputs, _ = batch
+        inputs, _, name = batch
         output = fn(inputs)
         train_batches += 1
-        sys.stdout.write('Minibatch: %i\r' % (train_batches,)),
+        sn = savename + name + '.npz'
+        sys.stdout.write('Minibatch: %i, %s\r' % (train_batches,sn)),
         sys.stdout.flush()
-        sn = savename + str(train_batches) + '.npz'
         np.savez(sn, output)
 
 # ################################ Helpers ####################################
@@ -155,7 +155,7 @@ if __name__ == '__main__':
          val_file = data_root + 'ImageNetTxt/val50.txt',
          savename = data_root + 'Experiments/trainRetrain/OP',
          synmap_file = data_root + 'ImageNetTxt/synmap.txt',
-         mb_size=50, preproc=False, synsets=data_root +'ImageNetTxt/synsets.txt',
+         mb_size=1, preproc=False, synsets=data_root +'ImageNetTxt/synsets.txt',
          modelFile= data_root + 'Experiments/alpha-3b/model0.npz',
          deterministic = True)
 
