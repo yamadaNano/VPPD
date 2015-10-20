@@ -59,25 +59,27 @@ def reload_cnn(im_shape, filename, input_var=None):
             W=params['full6.W'], b=params['full6.b'],
             nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     full7 = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(full6, 0.5), num_units=1000, name='full7',
+            lasagne.layers.dropout(full6, 0.5), num_units=50, name='full7',
             W=params['full7.W'], b=params['full7.b'],
-            nonlinearity=lasagne.nonlinearities.linear)
-    soft = nl.DistillationNonlinearity(full7, temp)
-    hard = nl.SoftmaxNonlinearity(full7)
-    return (soft, hard)
+            nonlinearity=lasagne.nonlinearities.softmax)
+    
+    return full7
 
 # ############################## Main program ################################
 # Everything else will be handled in our main program now. We could pull out
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(train_file, logit_folder, val_file, savename, mb_size=50,
+def main(train_file, logit_folder, val_file, savename, synmap_file, mb_size=50,
          preproc=False, synsets=None, deterministic=True,
          modelFile='./myModel.pkl'):
     print('Model file: %s' % (modelFile,))
     print("Loading data...")
     tr_addresses, tr_labels = hd.get_traindata(train_file, synsets)
     vl_addresses, vl_labels = hd.get_valdata(val_file)
+    synmap = get_synmap(synmap_file)
+    tr_labels = map_labels(tr_labels, synmap)
+    vl_labels = map_labels(vl_labels, synmap)
     # Variables
     input_var = T.tensor4('inputs')
     im_shape = (227, 227)
@@ -151,9 +153,10 @@ if __name__ == '__main__':
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
          logit_folder = data_root + 'originalLogits/LogitsMean',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/T1/T',
+         savename = data_root + 'Experiments/trainRetrain/OP',
+         synmap_file = data_root + 'ImageNetTxt/synmap.txt',
          mb_size=50, preproc=False, synsets=data_root +'ImageNetTxt/synsets.txt',
-         modelFile= data_root + 'Experiments/models/T' + str(int(temp)) + '.pkl',
+         modelFile= data_root + 'Experiments/alpha-3b/model0.pkl',
          deterministic = True)
 
         
