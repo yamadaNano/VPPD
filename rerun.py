@@ -102,7 +102,7 @@ def main(train_file, logit_folder, val_file, savename, synmap_file, mb_size=1,
         sn = savename + name[0]
         sys.stdout.write('Minibatch: %i, %s\r' % (train_batches,sn)),
         sys.stdout.flush()
-        np.savez(sn, output)
+        np.save(sn, output)
 
 # ################################ Helpers ####################################
 def get_learning_rate(epoch, margin, base):
