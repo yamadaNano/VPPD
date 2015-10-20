@@ -96,7 +96,7 @@ def main(train_file, logit_folder, val_file, savename, synmap_file, mb_size=50,
     trdlg = hd.data_and_label_generator(tr_addresses, tr_labels, im_shape,
                                         mb_size, shuffle=False, preproc=preproc)
     for batch in hd.threaded_gen(trdlg, num_cached=500):
-        inputs, _, _ = batch
+        inputs, _ = batch
         output = fn(inputs)
         train_batches += 1
         sys.stdout.write('Minibatch: %i\r' % (train_batches,)),
