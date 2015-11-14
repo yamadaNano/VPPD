@@ -13,23 +13,22 @@ import numpy
 def main():
     filename = '/home/daniel/Data/ImageNetTxt/transfer.txt'
     foldername = '/home/daniel/Data/targets/originalLogits/LogitsMean'
-    saveFolder = '/home/daniel/Data/targets/combinedTargets/normedLogitsMean'
+    saveFolder = '/home/daniel/Data/targets/combinedTargets/betaLogits0'
     synsets = '/home/daniel/Data/ImageNetTxt/synsets.txt'
     lines = openFile(filename, foldername)
     pairs = getSynsets(synsets)
     T = 10.
     L = 0.1
+    b = 0
     for line in lines:
         base = os.path.basename(line)
-        savename = saveFolder + '/' + base
+        savename = saveFolder + '/' + base.replace('.npz','.npy')
         syn = base.split('_')[0]
         data = numpy.load(line)['arr_0']
         t_x = softmax(data/T)
         y_x = getOneHot(t_x.shape, pairs[syn])
-        c_x = L*y_x + T*t_x
-        s_x = numpy.sum(c_x)
-        c_x = c_x / s_x
-        numpy.savez(savename, c_x=c_x, s_x=s_x)
+        c_x = L*y_x + T*t_x + b
+        numpy.save(savename, c_x)
         sys.stdout.flush()
         sys.stdout.write('%s \r' % (savename,))
         

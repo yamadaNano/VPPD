@@ -96,7 +96,7 @@ def data_label_name_generator(addresses, labels, im_shape, mb_size,
         yield (im, output, names)
 
 def data_logit_label_generator(addresses, logit_folder, im_shape, mb_size,
-                               k=1, preproc=False, shuffle=True, synsets=None):
+                               preproc=False, shuffle=True, synsets=None):
     '''Get images and pair up with logits'''
     pairs = get_synsets(synsets)
     order = ordering(len(addresses), shuffle) 
@@ -133,9 +133,9 @@ def data_target_generator(addresses, logit_folder, im_shape, mb_size,
             line = addresses[idx].rstrip('\n')
             images.append(load_image(line, im_shape, preproc))
             # Load logits
-            base = os.path.basename(line).replace('.npy','.npz')
+            base = os.path.basename(line) #.replace('.npy','.npz')
             logit_address = logit_folder + '/' + base
-            data = np.load(logit_address)['arr_0']
+            data = np.load(logit_address) #['arr_0']
             soft.append(data)
         im = np.dstack(images)
         im = np.transpose(im, (2,1,0)).reshape(-1,3,im_shape[0],im_shape[1])
@@ -144,7 +144,6 @@ def data_target_generator(addresses, logit_folder, im_shape, mb_size,
 
 def load_image(address, im_shape, preproc=False):
     '''Return image in appropriate format'''
-    #image = cv2.resize(caffe_load_image(address), im_shape)
     image = np.load(address).astype(theano.config.floatX)
     return preprocess(image, 1, preproc=preproc)
 

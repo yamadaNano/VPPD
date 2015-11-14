@@ -75,6 +75,7 @@ def main(train_file, logit_folder, val_file, savename, num_epochs=500,
     print("Loading data...")
     print('Loss type: %s' % (loss_type,))
     print('Bridge coeff: %s' % (bridgecoeff,))
+    print('Save name: %s' % (savename,))
     tr_addresses, tr_labels = hd.get_traindata(train_file, synsets)
     vl_addresses, vl_labels = hd.get_valdata(val_file)
     # Variables
@@ -221,9 +222,9 @@ if __name__ == '__main__':
     if len(sys.argv) > 4:
         base = float(sys.argv[4])
     main(train_file = data_root + 'ImageNetTxt/transfer.txt',
-         logit_folder = data_root + 'targets/combinedTargets/LogitsMean',
+         logit_folder = data_root + 'targets/combinedTargets/betaLogitsme6',
          val_file = data_root + 'ImageNetTxt/val50.txt',
-         savename = data_root + 'Experiments/bridgecoeff/T10_0p8.npz',
+         savename = data_root + 'Experiments/beta/betaLogitsme6.npz',
          num_epochs=50, margin=25, base=base, mb_size=50, momentum=0.9,
          preproc=True, synsets= data_root +'ImageNetTxt/synsets.txt',
          bridgecoeff=bridgecoeff)
