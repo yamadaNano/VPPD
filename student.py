@@ -144,7 +144,7 @@ def main(targetFile, nEpochs=500, lr=1e-2):
             loss, params, learning_rate=lr, momentum=0.9)
     # Flow graph compilations
     train_fn = theano.function([input_var, target_var], loss, updates=updates)
-    val_fn = theano.function([input_var, val_target_var], [test_loss, test_acc])
+    val_fn = theano.function([input_var], [test_loss, test_acc])
     # Finally, launch the training loop.
     print("Starting training...")
     # We iterate over epochs:
