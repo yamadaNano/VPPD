@@ -67,17 +67,17 @@ def load_dataset():
 def rebuild(params, input_var=None):
     inc = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                     input_var=input_var)
-    cv1 = recvLayer(inc, 32, (5,5), 'cv1', params)
+    cv1 = recvLayer(inc, 32, (5,5), 'cv1', params, 0, 1)
     pl1 = plLayer(cv1, (3,3), 2, 'pl1')
-    cv2 = recvLayer(pl1, 32, (5,5), 'cv2', params)
+    cv2 = recvLayer(pl1, 32, (5,5), 'cv2', params, 2, 3)
     pl2 = plLayer(cv2, (3,3), 2, 'pl2')
     pl2D = dropout(pl2, 0.5)
-    fc1 = refcLayer(pl2D, 800, 'fc1', params)
+    fc1 = refcLayer(pl2D, 800, 'fc1', params, 4, 5)
     fc1D = dropout(fc1, 0.5)
-    fc2 = refcLayer(fc1D, 800, 'fc2', params)
+    fc2 = refcLayer(fc1D, 800, 'fc2', params, 6, 7)
     fc2D = dropout(fc2, 0.5)
-    l_out = lasagne.layers.DenseLayer(fc2D, num_units=10, W=params['l_out.W'],
-            b=params['l_out.b'], nonlinearity=lasagne.nonlinearities.softmax)
+    l_out = lasagne.layers.DenseLayer(fc2D, num_units=10, W=params[8],
+            b=params[9], nonlinearity=lasagne.nonlinearities.softmax)
     return l_out
     
 def fcLayer(incoming, num_units, name):
@@ -87,13 +87,11 @@ def fcLayer(incoming, num_units, name):
                                    W=lasagne.init.HeUniform(), name=name)
     return fc
 
-def refcLayer(incoming, num_units, name):
+def refcLayer(incoming, num_units, name, n1, n2):
     '''Build and return a fully-connected layer'''
-    nameW = name + '.W'
-    nameb = name + '.b'
     fc = lasagne.layers.DenseLayer(incoming, num_units=num_units,
                                    nonlinearity=lasagne.nonlinearities.rectify,
-                                   W=params[nameW], b=params[nameb], name=name)
+                                   W=params[n1], b=params[n2], name=name)
     return fc
 
 def cvLayer(incoming, nFilters, filterSize, name):
@@ -103,13 +101,13 @@ def cvLayer(incoming, nFilters, filterSize, name):
         nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     return conv
 
-def recvLayer(incoming, nFilters, filterSize, name, params):
+def recvLayer(incoming, nFilters, filterSize, name, params, n1, n2):
     '''Build and return a conv layer'''
     nameW = name + '.W'
     nameb = name + '.b'
     conv = lasagne.layers.Conv2DLayer(
         incoming, num_filters=nFilters, filter_size=filterSize, name=name,
-        W=params[nameW], b=params[nameb],
+        W=params[n1], b=params[n2],
         nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     return conv
 
