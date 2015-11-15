@@ -134,9 +134,9 @@ def main(targetFile, nEpochs=500, lr=1e-2):
     loss = loss.mean()
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
-                                                            val_target_var)
+                                                            target_var)
     test_loss = test_loss.mean()
-    test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), val_target_var),
+    test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), target_var),
                       dtype=theano.config.floatX)
     # Updates
     params = lasagne.layers.get_all_params(network, trainable=True)
