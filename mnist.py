@@ -80,7 +80,6 @@ def build(input_var=None):
             nonlinearity=lasagne.nonlinearities.softmax)
     return l_out
 
-
 def fcLayer(incoming, num_units, name):
     '''Build and return a fully-connected layer'''
     fc = lasagne.layers.DenseLayer(incoming, num_units=num_units,

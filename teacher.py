@@ -64,35 +64,22 @@ def load_dataset():
 
 # ##################### Build the neural network model #######################
 
-def build(input_var=None):
+def rebuild(params, input_var=None):
     inc = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                     input_var=input_var)
-    cv1 = cvLayer(inc, 32, (5,5), 'cv1')
+    cv1 = recvLayer(inc, 32, (5,5), 'cv1', params)
     pl1 = plLayer(cv1, (3,3), 2, 'pl1')
-    cv2 = cvLayer(pl1, 32, (5,5), 'cv1')
-    pl2 = plLayer(cv2, (3,3), 2, 'pl1')
+    cv2 = recvLayer(pl1, 32, (5,5), 'cv2', params)
+    pl2 = plLayer(cv2, (3,3), 2, 'pl2')
     pl2D = dropout(pl2, 0.5)
-    fc1 = fcLayer(pl2D, 800, 'fc1')
+    fc1 = refcLayer(pl2D, 800, 'fc1', params)
     fc1D = dropout(fc1, 0.5)
-    fc2 = fcLayer(fc1D, 800, 'fc2')
+    fc2 = refcLayer(fc1D, 800, 'fc2', params)
     fc2D = dropout(fc2, 0.5)
-    l_out = lasagne.layers.DenseLayer(fc2D, num_units=10,
-            nonlinearity=lasagne.nonlinearities.softmax)
+    l_out = lasagne.layers.DenseLayer(fc2D, num_units=10, W=params['l_out.W'],
+            b=params['l_out.b'], nonlinearity=lasagne.nonlinearities.softmax)
     return l_out
-
-
-def reload_cnn(im_shape, filename, input_var=None):
-    params = np.load(filename)
-    incoming = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
-                                        input_var=input_var)
-    conv1 = lasagne.layers.Conv2DLayer(
-            incoming, num_filters=32, filter_size=(5,5), name='cv1',
-            W=params['cv1.W'], b=params['cv1.b'],
-            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
-    pool1 = lasagne.layers.MaxPool2DLayer(conv1, pool_size=(3,3), stride=2)
     
-
-
 def fcLayer(incoming, num_units, name):
     '''Build and return a fully-connected layer'''
     fc = lasagne.layers.DenseLayer(incoming, num_units=num_units,
@@ -156,82 +143,26 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(nEpochs=500):
+def main(filename):
     # Load the dataset
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
-    target_var = T.ivector('targets')
     print("Building model and compiling functions...")
-    network = build(input_var)
-    # Loss
-    prediction = lasagne.layers.get_output(network)
-    loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-    loss = loss.mean()
-    test_prediction = lasagne.layers.get_output(network, deterministic=True)
-    test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
-                                                            target_var)
-    test_loss = test_loss.mean()
-    test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), target_var),
-                      dtype=theano.config.floatX)
-    # Updates
-    params = lasagne.layers.get_all_params(network, trainable=True)
-    updates = lasagne.updates.nesterov_momentum(
-            loss, params, learning_rate=0.01, momentum=0.9)
+    params = np.load(filename)
+    network = rebuild(params, input_var=input_var)
+    # Output
+    prediction = lasagne.layers.get_output(network, deterministic=False)
     # Flow graph compilations
-    train_fn = theano.function([input_var, target_var], loss, updates=updates)
-    val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
+    fn = theano.function([input_var,], prediction)
     # Finally, launch the training loop.
     print("Starting training...")
-    # We iterate over epochs:
-    for epoch in range(nEpochs):
-        # In each epoch, we do a full pass over the training data:
-        train_err = 0
-        train_batches = 0
-        start_time = time.time()
-        for batch in iterate_minibatches(X_train, y_train, 500, shuffle=True):
-            inputs, targets = batch
-            train_err += train_fn(inputs, targets)
-            train_batches += 1
-
-        # And a full pass over the validation data:
-        val_err = 0
-        val_acc = 0
-        val_batches = 0
-        for batch in iterate_minibatches(X_val, y_val, 500, shuffle=False):
-            inputs, targets = batch
-            err, acc = val_fn(inputs, targets)
-            val_err += err
-            val_acc += acc
-            val_batches += 1
-
-        # Then we print the results for this epoch:
-        print("Epoch {} of {} took {:.3f}s".format(
-            epoch + 1, nEpochs, time.time() - start_time))
-        print("  training loss:\t\t{:.6f}".format(train_err / train_batches))
-        print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
-        print("  validation accuracy:\t\t{:.2f} %".format(
-            val_acc / val_batches * 100))
-
-    # After training, we compute and print the test error:
-    test_err = 0
-    test_acc = 0
-    test_batches = 0
-    for batch in iterate_minibatches(X_test, y_test, 500, shuffle=False):
-        inputs, targets = batch
-        err, acc = val_fn(inputs, targets)
-        test_err += err
-        test_acc += acc
-        test_batches += 1
-    print("Final results:")
-    print("  test loss:\t\t\t{:.6f}".format(test_err / test_batches))
-    print("  test accuracy:\t\t{:.2f} %".format(
-        test_acc / test_batches * 100))
-
-    # Optionally, you could now dump the network weights to a file like this:
-    np.savez('./models/cnn.npz', lasagne.layers.get_all_param_values(network))
+    for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
+        inputs, __ = batch
+        outputs = train_fn(inputs)
 
 
 if __name__ == '__main__':
+    filename = './models/cnn.npz'
     main()
