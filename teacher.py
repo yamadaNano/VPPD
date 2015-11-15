@@ -155,9 +155,11 @@ def main(filename, savename, nSamples):
     # Flow graph compilations
     fn = theano.function([input_var,], prediction)
     # Finally, launch the training loop.
-    outputs = []
     print("Starting sampling")
     for i in np.arange(nSamples):
+        sys.stdout.flush()
+        sys.stdout.write('%i\r' % (i,))
+        outputs = []
         for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
             inputs, __ = batch
             outputs.append(fn(inputs))
