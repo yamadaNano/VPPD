@@ -76,7 +76,7 @@ def load_dataset():
 
 # ##################### Build the neural network model #######################
 
-def build_mlp(input_var=None):
+def build(input_var=None):
     inc = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                     input_var=input_var)
     incD = dropout(inc, 0.2)
@@ -88,12 +88,22 @@ def build_mlp(input_var=None):
             nonlinearity=lasagne.nonlinearities.softmax)
     return l_out
 
-def fcLayer(incoming, num_units):
+def fcLayer(incoming, num_units, name):
     '''Build and return a fully-connected layer'''
     fc = lasagne.layers.DenseLayer(incoming, num_units=num_units,
                                    nonlinearity=lasagne.nonlinearities.rectify,
-                                   W=lasagne.init.HeUniform())
+                                   W=lasagne.init.HeUniform(), name=name)
     return fc
+
+def cvLayer(incoming, nFilters, filterSize, name):
+    conv = lasagne.layers.Conv2DLayer(
+        incoming, num_filters=nFilters, filter_size=filterSize, name=name,
+        nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
+    return conv
+
+def plLayer(incoming, poolSize, stride, name):    
+    pool = lasagne.layers.MaxPool2DLayer(incoming, pool_size=poolSize,
+                                         stride=stride, name=name)
 
 def dropout(incoming, dropProb):
     '''Build a dropout layer'''
@@ -127,7 +137,7 @@ def main(model='mlp', num_epochs=500):
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
     print("Building model and compiling functions...")
-    network = build_mlp(input_var)
+    network = build(input_var)
     # Loss
     prediction = lasagne.layers.get_output(network)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
