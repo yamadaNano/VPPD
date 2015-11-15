@@ -87,7 +87,7 @@ def fcLayer(incoming, num_units, name):
                                    W=lasagne.init.HeUniform(), name=name)
     return fc
 
-def refcLayer(incoming, num_units, name, n1, n2):
+def refcLayer(incoming, num_units, name, params, n1, n2):
     '''Build and return a fully-connected layer'''
     fc = lasagne.layers.DenseLayer(incoming, num_units=num_units,
                                    nonlinearity=lasagne.nonlinearities.rectify,
