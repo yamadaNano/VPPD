@@ -80,9 +80,9 @@ def build(input_var=None):
     inc = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                     input_var=input_var)
     incD = dropout(inc, 0.2)
-    fc1 = fcLayer(incD, 800)
+    fc1 = fcLayer(incD, 800, 'fc1')
     fc1D = dropout(fc1, 0.5)
-    fc2 = fcLayer(fc1D, 800)
+    fc2 = fcLayer(fc1D, 800, 'fc2')
     fc2D = dropout(fc2, 0.5)
     l_out = lasagne.layers.DenseLayer(fc2D, num_units=10,
             nonlinearity=lasagne.nonlinearities.softmax)
