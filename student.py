@@ -123,6 +123,7 @@ def main(targetFile, nEpochs=500, lr=1e-2):
     # Load the dataset
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+    y_train = loadTeacher(targetFile + 'pred.npy')
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
     target_var = T.fmatrix('targets')
@@ -156,7 +157,7 @@ def main(targetFile, nEpochs=500, lr=1e-2):
         train_err = 0
         train_batches = 0
         start_time = time.time()
-        y_train = loadTeacher(targetFile + str(epoch%100) + '.npy')
+        #y_train = loadTeacher(targetFile + str(epoch%100) + '.npy')
         for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
             inputs, targets = batch
             train_err += train_fn(inputs, targets)
