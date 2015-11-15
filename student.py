@@ -63,7 +63,7 @@ def load_dataset():
 
 def loadTeacher(filename):
     '''Load targets from the teacher network'''
-    return np.load(filename)
+    return np.load(filename).astype(theano.config.float32)
 
 
 # ##################### Build the neural network model #######################
