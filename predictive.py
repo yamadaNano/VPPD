@@ -7,7 +7,7 @@ import numpy
 folder = './targets'
 data = numpy.zeros((50000,10))
 for i in range(100
-    print()
+    print(i)
     data += numpy.load(folder + '/t' + str(i) + '.npy')
 
 savename = './targets/tpred.npy'
