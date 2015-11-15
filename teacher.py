@@ -1,4 +1,4 @@
-"""Train a teacher"""
+"""Get output"""
 
 from __future__ import print_function
 
@@ -69,16 +69,28 @@ def build(input_var=None):
                                     input_var=input_var)
     cv1 = cvLayer(inc, 32, (5,5), 'cv1')
     pl1 = plLayer(cv1, (3,3), 2, 'pl1')
-    cv2 = cvLayer(pl1, 32, (5,5), 'cv2')
+    cv2 = cvLayer(pl1, 32, (5,5), 'cv1')
     pl2 = plLayer(cv2, (3,3), 2, 'pl1')
     pl2D = dropout(pl2, 0.5)
     fc1 = fcLayer(pl2D, 800, 'fc1')
     fc1D = dropout(fc1, 0.5)
     fc2 = fcLayer(fc1D, 800, 'fc2')
     fc2D = dropout(fc2, 0.5)
-    l_out = lasagne.layers.DenseLayer(fc2D, num_units=10, name='l_out',
+    l_out = lasagne.layers.DenseLayer(fc2D, num_units=10,
             nonlinearity=lasagne.nonlinearities.softmax)
     return l_out
+
+
+def reload_cnn(im_shape, filename, input_var=None):
+    params = np.load(filename)
+    incoming = lasagne.layers.InputLayer(shape=(None, 3, im_shape[0], im_shape[1]),
+                                        input_var=input_var)
+    conv1 = lasagne.layers.Conv2DLayer(
+            incoming, num_filters=32, filter_size=(5,5), name='cv1',
+            W=params['cv1.W'], b=params['cv1.b'],
+            nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
+    pool1 = lasagne.layers.MaxPool2DLayer(conv1, pool_size=(3,3), stride=2)
+    
 
 
 def fcLayer(incoming, num_units, name):
@@ -88,13 +100,34 @@ def fcLayer(incoming, num_units, name):
                                    W=lasagne.init.HeUniform(), name=name)
     return fc
 
+def refcLayer(incoming, num_units, name):
+    '''Build and return a fully-connected layer'''
+    nameW = name + '.W'
+    nameb = name + '.b'
+    fc = lasagne.layers.DenseLayer(incoming, num_units=num_units,
+                                   nonlinearity=lasagne.nonlinearities.rectify,
+                                   W=params[nameW], b=params[nameb], name=name)
+    return fc
+
 def cvLayer(incoming, nFilters, filterSize, name):
+    '''Build and return a conv layer'''
     conv = lasagne.layers.Conv2DLayer(
         incoming, num_filters=nFilters, filter_size=filterSize, name=name,
         nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
     return conv
 
-def plLayer(incoming, poolSize, stride, name):    
+def recvLayer(incoming, nFilters, filterSize, name, params):
+    '''Build and return a conv layer'''
+    nameW = name + '.W'
+    nameb = name + '.b'
+    conv = lasagne.layers.Conv2DLayer(
+        incoming, num_filters=nFilters, filter_size=filterSize, name=name,
+        W=params[nameW], b=params[nameb],
+        nonlinearity=lasagne.nonlinearities.very_leaky_rectify)
+    return conv
+
+def plLayer(incoming, poolSize, stride, name):
+    '''Build and return a max-pooling layer'''
     pool = lasagne.layers.MaxPool2DLayer(incoming, pool_size=poolSize,
                                          stride=stride, name=name)
     return pool
