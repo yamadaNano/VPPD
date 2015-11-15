@@ -61,6 +61,10 @@ def load_dataset():
     # (It doesn't matter how we do this as long as we can read them again.)
     return X_train, y_train, X_val, y_val, X_test, y_test
 
+def loadTeacher(filename):
+    '''Load targets from the teacher network'''
+    return np.load(filename)
+
 
 # ##################### Build the neural network model #######################
 
@@ -115,10 +119,11 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(nEpochs=500):
+def main(targetFile, nEpochs=500):
     # Load the dataset
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+    y_train = np.loadTeacher(targetFile)
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
     target_var = T.itensor('targets')
@@ -193,4 +198,5 @@ def main(nEpochs=500):
 
 
 if __name__ == '__main__':
-    main()
+    targetFile = './targets/tmean.npy'
+    main(targetFile)
