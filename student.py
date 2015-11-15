@@ -160,7 +160,7 @@ def main(targetFile, nEpochs=500, lr=1e-2):
         train_batches = 0
         start_time = time.time()
         #y_train = loadTeacher(targetFile + str(epoch%100) + '.npy')
-        for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
+        for batch in iterate_minibatches(X_train, y_train, y_train2, 500, shuffle=False):
             inputs, targets, targets2 = batch
             train_err += train_fn(inputs, targets, targets2)
             train_batches += 1
