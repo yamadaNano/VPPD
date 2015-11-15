@@ -141,7 +141,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(filename):
+def main(filename, savename, nSamples):
     # Load the dataset
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
@@ -157,13 +157,15 @@ def main(filename):
     # Finally, launch the training loop.
     outputs = []
     print("Starting sampling")
-    for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
-        inputs, __ = batch
-        outputs.append(fn(inputs))
-    outputs = np.vstack(outputs)
-    print(outputs.shape)
+    for i in np.arange(nSamples):
+        for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
+            inputs, __ = batch
+            outputs.append(fn(inputs))
+        outputs = np.vstack(outputs)
+        np.save(savename + str(i), outputs)
 
 
 if __name__ == '__main__':
     filename = './models/cnn.npz'
-    main(filename)
+    savename = './targets/t'
+    main(filename, savename, nSamples=100)
