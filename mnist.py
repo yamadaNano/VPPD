@@ -103,7 +103,7 @@ def cvLayer(incoming, nFilters, filterSize, name):
     conv = lasagne.layers.Conv2DLayer(
         incoming, num_filters=nFilters, filter_size=filterSize, name=name,
         nonlinearity=lasagne.nonlinearities.very_leaky_rectify,
-        Wlasagne.init.HeUniform())
+        W=lasagne.init.HeUniform())
     return conv
 
 def plLayer(incoming, poolSize, stride, name):    
