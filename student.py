@@ -155,8 +155,8 @@ def main(targetFile, nEpochs=500, lr=1e-2):
         start_time = time.time()
         #y_train = loadTeacher(targetFile + str(epoch%100) + '.npy')
         for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
-            inputs, targets, targets2 = batch
-            train_err += train_fn(inputs, targets, targets2)
+            inputs, targets = batch
+            train_err += train_fn(inputs, targets)
             train_batches += 1
 
         # And a full pass over the validation data:
