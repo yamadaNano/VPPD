@@ -134,7 +134,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(model='mlp', num_epochs=500):
+def main(nEpochs=500):
     # Load the dataset
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
@@ -163,7 +163,7 @@ def main(model='mlp', num_epochs=500):
     # Finally, launch the training loop.
     print("Starting training...")
     # We iterate over epochs:
-    for epoch in range(num_epochs):
+    for epoch in range(nEpochs):
         # In each epoch, we do a full pass over the training data:
         train_err = 0
         train_batches = 0
@@ -186,7 +186,7 @@ def main(model='mlp', num_epochs=500):
 
         # Then we print the results for this epoch:
         print("Epoch {} of {} took {:.3f}s".format(
-            epoch + 1, num_epochs, time.time() - start_time))
+            epoch + 1, nEpochs, time.time() - start_time))
         print("  training loss:\t\t{:.6f}".format(train_err / train_batches))
         print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
         print("  validation accuracy:\t\t{:.2f} %".format(
@@ -208,8 +208,8 @@ def main(model='mlp', num_epochs=500):
         test_acc / test_batches * 100))
 
     # Optionally, you could now dump the network weights to a file like this:
-    # np.savez('model.npz', lasagne.layers.get_all_param_values(network))
+    np.savez('model.npz', lasagne.layers.get_all_param_values(network))
 
 
 if __name__ == '__main__':
-    main()
+    main(nEpochs = 1)
