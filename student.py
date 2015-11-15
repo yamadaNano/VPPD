@@ -126,7 +126,7 @@ def main(targetFile, nEpochs=500):
     y_train = loadTeacher(targetFile)
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
-    target_var = T.itensor('targets')
+    target_var = T.itensor4('targets')
     print("Building model and compiling functions...")
     network = build(input_var)
     # Loss
