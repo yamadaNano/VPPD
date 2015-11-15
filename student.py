@@ -101,7 +101,7 @@ def dropout(incoming, dropProb):
 
 # ############################# Batch iterator ###############################
 
-def iterate_minibatches(inputs, targets, targets2, batchsize, shuffle=False):
+def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
     assert len(inputs) == len(targets)
     if shuffle:
         indices = np.arange(len(inputs))
@@ -111,7 +111,7 @@ def iterate_minibatches(inputs, targets, targets2, batchsize, shuffle=False):
             excerpt = indices[start_idx:start_idx + batchsize]
         else:
             excerpt = slice(start_idx, start_idx + batchsize)
-        yield inputs[excerpt], targets[excerpt], targets2[excerpt]
+        yield inputs[excerpt], targets[excerpt]
 
 
 # ############################## Main program ################################
@@ -122,20 +122,16 @@ def iterate_minibatches(inputs, targets, targets2, batchsize, shuffle=False):
 def main(targetFile, nEpochs=500, lr=1e-2):
     # Load the dataset
     print("Loading data...")
-    X_train, y_train2, X_val, y_val, X_test, y_test = load_dataset()
-    #y_train = loadTeacher(targetFile + 'pred.npy')
+    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
-    target_var = T.fmatrix('targets')
-    target_var2 = T.ivector('targets2')
-    val_target_var = T.ivector('val_targets')
+    target_var = T.ivector('targets')
     print("Building model and compiling functions...")
     network = build(input_var)
     # Loss
-    prediction = lasagne.layers.get_output(network, deterministic=True)
+    prediction = lasagne.layers.get_output(network, deterministic=False)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
     loss = loss.mean()
-    loss = loss + lasagne.objectives.categorical_crossentropy(prediction, target_var2).mean()
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
                                                             val_target_var)
@@ -147,7 +143,7 @@ def main(targetFile, nEpochs=500, lr=1e-2):
     updates = lasagne.updates.nesterov_momentum(
             loss, params, learning_rate=lr, momentum=0.9)
     # Flow graph compilations
-    train_fn = theano.function([input_var, target_var, target_var2], loss, updates=updates)
+    train_fn = theano.function([input_var, target_var], loss, updates=updates)
     val_fn = theano.function([input_var, val_target_var], [test_loss, test_acc])
     # Finally, launch the training loop.
     print("Starting training...")
@@ -157,8 +153,8 @@ def main(targetFile, nEpochs=500, lr=1e-2):
         train_err = 0
         train_batches = 0
         start_time = time.time()
-        y_train = loadTeacher(targetFile + str(epoch%100) + '.npy')
-        for batch in iterate_minibatches(X_train, y_train, y_train2, 500, shuffle=False):
+        #y_train = loadTeacher(targetFile + str(epoch%100) + '.npy')
+        for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
             inputs, targets, targets2 = batch
             train_err += train_fn(inputs, targets, targets2)
             train_batches += 1
@@ -167,8 +163,8 @@ def main(targetFile, nEpochs=500, lr=1e-2):
         val_err = 0
         val_acc = 0
         val_batches = 0
-        for batch in iterate_minibatches(X_val, y_val, y_val, 500, shuffle=False):
-            inputs, targets, __ = batch
+        for batch in iterate_minibatches(X_val, y_val, 500, shuffle=False):
+            inputs, targets = batch
             err, acc = val_fn(inputs, targets)
             val_err += err
             val_acc += acc
@@ -186,8 +182,8 @@ def main(targetFile, nEpochs=500, lr=1e-2):
     test_err = 0
     test_acc = 0
     test_batches = 0
-    for batch in iterate_minibatches(X_test, y_test, y_test, 500, shuffle=True):
-        inputs, targets, __ = batch
+    for batch in iterate_minibatches(X_test, y_test, 500, shuffle=True):
+        inputs, targets = batch
         err, acc = val_fn(inputs, targets)
         test_err += err
         test_acc += acc
