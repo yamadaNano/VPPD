@@ -123,7 +123,7 @@ def main(targetFile, nEpochs=500):
     # Load the dataset
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
-    y_train = np.loadTeacher(targetFile)
+    y_train = loadTeacher(targetFile)
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
     target_var = T.itensor('targets')
