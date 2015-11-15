@@ -61,19 +61,18 @@ def load_dataset():
     # (It doesn't matter how we do this as long as we can read them again.)
     return X_train, y_train, X_val, y_val, X_test, y_test
 
-def loadTeacher(filename):
-    '''Load targets from the teacher network'''
-    return np.load(filename).astype(theano.config.floatX)
-
 
 # ##################### Build the neural network model #######################
 
 def build(input_var=None):
     inc = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                     input_var=input_var)
-    fc1 = fcLayer(inc, 800, 'fc1')
-    fc2 = fcLayer(fc1, 800, 'fc2')
-    l_out = lasagne.layers.DenseLayer(fc2, num_units=10, name='l_out',
+    pl2D = dropout(pl2, 0.2)
+    fc1 = fcLayer(pl2D, 800, 'fc1')
+    fc1D = dropout(fc1, 0.5)
+    fc2 = fcLayer(fc1D, 800, 'fc2')
+    fc2D = dropout(fc2, 0.5)
+    l_out = lasagne.layers.DenseLayer(fc2D, num_units=10, name='l_out',
             nonlinearity=lasagne.nonlinearities.softmax)
     return l_out
 
@@ -119,7 +118,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(targetFile, nEpochs=500, lr=1e-2):
+def main(nEpochs=500):
     # Load the dataset
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
@@ -129,9 +128,9 @@ def main(targetFile, nEpochs=500, lr=1e-2):
     print("Building model and compiling functions...")
     network = build(input_var)
     # Loss
-    prediction = lasagne.layers.get_output(network, deterministic=False)
+    prediction = lasagne.layers.get_output(network)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-    loss = loss.mean() 
+    loss = loss.mean()
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
                                                             target_var)
@@ -141,7 +140,7 @@ def main(targetFile, nEpochs=500, lr=1e-2):
     # Updates
     params = lasagne.layers.get_all_params(network, trainable=True)
     updates = lasagne.updates.nesterov_momentum(
-            loss, params, learning_rate=lr, momentum=0.9)
+            loss, params, learning_rate=0.01, momentum=0.9)
     # Flow graph compilations
     train_fn = theano.function([input_var, target_var], loss, updates=updates)
     val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
@@ -153,8 +152,7 @@ def main(targetFile, nEpochs=500, lr=1e-2):
         train_err = 0
         train_batches = 0
         start_time = time.time()
-        #y_train = loadTeacher(targetFile + str(epoch%100) + '.npy')
-        for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
+        for batch in iterate_minibatches(X_train, y_train, 500, shuffle=True):
             inputs, targets = batch
             train_err += train_fn(inputs, targets)
             train_batches += 1
@@ -182,7 +180,7 @@ def main(targetFile, nEpochs=500, lr=1e-2):
     test_err = 0
     test_acc = 0
     test_batches = 0
-    for batch in iterate_minibatches(X_test, y_test, 500, shuffle=True):
+    for batch in iterate_minibatches(X_test, y_test, 500, shuffle=False):
         inputs, targets = batch
         err, acc = val_fn(inputs, targets)
         test_err += err
@@ -194,9 +192,8 @@ def main(targetFile, nEpochs=500, lr=1e-2):
         test_acc / test_batches * 100))
 
     # Optionally, you could now dump the network weights to a file like this:
-    np.savez('./models/mlp.npz', lasagne.layers.get_all_param_values(network))
+    np.savez('./models/cnn.npz', lasagne.layers.get_all_param_values(network))
 
 
 if __name__ == '__main__':
-    targetFile = './targets/t'
-    main(targetFile, lr=1e-2)
+    main()
