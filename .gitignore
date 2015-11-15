@@ -1,4 +1,6 @@
 models/MNISTsplit.pkl
 models/splits/
 splits/
-.pyc
+*.pyc
+*.npy
+*.npz
