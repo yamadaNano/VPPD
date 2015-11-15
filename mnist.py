@@ -108,6 +108,7 @@ def cvLayer(incoming, nFilters, filterSize, name):
 def plLayer(incoming, poolSize, stride, name):    
     pool = lasagne.layers.MaxPool2DLayer(incoming, pool_size=poolSize,
                                          stride=stride, name=name)
+    return pool
 
 def dropout(incoming, dropProb):
     '''Build a dropout layer'''
