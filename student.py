@@ -169,8 +169,8 @@ def main(targetFile, nEpochs=500, lr=1e-2):
         val_err = 0
         val_acc = 0
         val_batches = 0
-        for batch in iterate_minibatches(X_val, y_val, 500, shuffle=False):
-            inputs, targets = batch
+        for batch in iterate_minibatches(X_val, y_val, y_val, 500, shuffle=False):
+            inputs, targets, __ = batch
             err, acc = val_fn(inputs, targets)
             val_err += err
             val_acc += acc
