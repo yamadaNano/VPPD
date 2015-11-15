@@ -127,6 +127,7 @@ def main(targetFile, nEpochs=500):
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
     target_var = T.fmatrix('targets')
+    val_target_var = T.ivector('val_targets')
     print("Building model and compiling functions...")
     network = build(input_var)
     # Loss
@@ -135,9 +136,9 @@ def main(targetFile, nEpochs=500):
     loss = loss.mean()
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
-                                                            target_var)
+                                                            val_target_var)
     test_loss = test_loss.mean()
-    test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), target_var),
+    test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), val_target_var),
                       dtype=theano.config.floatX)
     # Updates
     params = lasagne.layers.get_all_params(network, trainable=True)
@@ -145,7 +146,7 @@ def main(targetFile, nEpochs=500):
             loss, params, learning_rate=0.01, momentum=0.9)
     # Flow graph compilations
     train_fn = theano.function([input_var, target_var], loss, updates=updates)
-    val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
+    val_fn = theano.function([input_var, val_target_var], [test_loss, test_acc])
     # Finally, launch the training loop.
     print("Starting training...")
     # We iterate over epochs:
