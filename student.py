@@ -131,8 +131,9 @@ def main(targetFile, nEpochs=500, lr=1e-2):
     network = build(input_var)
     # Loss
     prediction = lasagne.layers.get_output(network, deterministic=True)
-    loss = lasagne.objectives.categorical_crossentropy(target_var, prediction)
-    loss = loss.mean()
+    #loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
+    #loss = loss.mean()
+    loss = T.mean(T.sum(prediction*T.log(target_var), axis=1))
     loss = loss + T.mean(T.sum(prediction*T.log(prediction), axis=1))
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
@@ -201,4 +202,4 @@ def main(targetFile, nEpochs=500, lr=1e-2):
 
 if __name__ == '__main__':
     targetFile = './targets/t'
-    main(targetFile, lr=5e-5)
+    main(targetFile, lr=5e-3)
