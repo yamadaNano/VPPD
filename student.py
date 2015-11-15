@@ -119,7 +119,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(targetFile, nEpochs=500):
+def main(targetFile, nEpochs=500, lr=1e-2):
     # Load the dataset
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
@@ -143,7 +143,7 @@ def main(targetFile, nEpochs=500):
     # Updates
     params = lasagne.layers.get_all_params(network, trainable=True)
     updates = lasagne.updates.nesterov_momentum(
-            loss, params, learning_rate=0.01, momentum=0.9)
+            loss, params, learning_rate=lr, momentum=0.9)
     # Flow graph compilations
     train_fn = theano.function([input_var, target_var], loss, updates=updates)
     val_fn = theano.function([input_var, val_target_var], [test_loss, test_acc])
@@ -200,4 +200,4 @@ def main(targetFile, nEpochs=500):
 
 if __name__ == '__main__':
     targetFile = './targets/tmean.npy'
-    main(targetFile)
+    main(targetFile, lr=1e-3)
