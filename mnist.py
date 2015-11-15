@@ -208,7 +208,7 @@ def main(nEpochs=500):
         test_acc / test_batches * 100))
 
     # Optionally, you could now dump the network weights to a file like this:
-    np.savez('model.npz', lasagne.layers.get_all_param_values(network))
+    np.savez('/models/cnn.npz', lasagne.layers.get_all_param_values(network))
 
 
 if __name__ == '__main__':
