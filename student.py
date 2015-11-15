@@ -101,7 +101,7 @@ def dropout(incoming, dropProb):
 
 # ############################# Batch iterator ###############################
 
-def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
+def iterate_minibatches(inputs, targets, targets2, batchsize, shuffle=False):
     assert len(inputs) == len(targets)
     if shuffle:
         indices = np.arange(len(inputs))
@@ -111,7 +111,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
             excerpt = indices[start_idx:start_idx + batchsize]
         else:
             excerpt = slice(start_idx, start_idx + batchsize)
-        yield inputs[excerpt], targets[excerpt]
+        yield inputs[excerpt], targets[excerpt], targets2[excerpt]
 
 
 # ############################## Main program ################################
@@ -122,11 +122,12 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 def main(targetFile, nEpochs=500, lr=1e-2):
     # Load the dataset
     print("Loading data...")
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+    X_train, y_train2, X_val, y_val, X_test, y_test = load_dataset()
     y_train = loadTeacher(targetFile + 'pred.npy')
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
     target_var = T.fmatrix('targets')
+    target_var2 = T.ivector('targets2')
     val_target_var = T.ivector('val_targets')
     print("Building model and compiling functions...")
     network = build(input_var)
@@ -136,6 +137,7 @@ def main(targetFile, nEpochs=500, lr=1e-2):
     #loss = loss.mean()
     loss = -T.mean(T.sum(prediction*T.log(target_var), axis=1))
     loss = loss + T.mean(T.sum(prediction*T.log(prediction), axis=1))
+    loss = loss + lasagne.objectives.categorical_crossentropy(prediction, target_var2).mean()
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
                                                             val_target_var)
@@ -147,7 +149,7 @@ def main(targetFile, nEpochs=500, lr=1e-2):
     updates = lasagne.updates.nesterov_momentum(
             loss, params, learning_rate=lr, momentum=0.9)
     # Flow graph compilations
-    train_fn = theano.function([input_var, target_var], loss, updates=updates)
+    train_fn = theano.function([input_var, target_var, target_var2], loss, updates=updates)
     val_fn = theano.function([input_var, val_target_var], [test_loss, test_acc])
     # Finally, launch the training loop.
     print("Starting training...")
@@ -159,8 +161,8 @@ def main(targetFile, nEpochs=500, lr=1e-2):
         start_time = time.time()
         #y_train = loadTeacher(targetFile + str(epoch%100) + '.npy')
         for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
-            inputs, targets = batch
-            train_err += train_fn(inputs, targets)
+            inputs, targets, targets2 = batch
+            train_err += train_fn(inputs, targets, targets2)
             train_batches += 1
 
         # And a full pass over the validation data:
