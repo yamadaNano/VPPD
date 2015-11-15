@@ -79,8 +79,12 @@ def load_dataset():
 def build(input_var=None):
     inc = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                     input_var=input_var)
-    incD = dropout(inc, 0.2)
-    fc1 = fcLayer(incD, 800, 'fc1')
+    cv1 = cvLayer(inc, 32, (5, 5), 'cv1')
+    pl1 = plLayer(cv1, (3,3), 2, 'pl1')
+    cv2 = cvLayer(pl1, 32, (5, 5), 'cv1')
+    pl2 = plLayer(cv2, (3,3), 2, 'pl1')
+    pl2D = dropout(pl2, 0.5)
+    fc1 = fcLayer(pl2D, 800, 'fc1')
     fc1D = dropout(fc1, 0.5)
     fc2 = fcLayer(fc1D, 800, 'fc2')
     fc2D = dropout(fc2, 0.5)
