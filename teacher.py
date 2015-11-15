@@ -150,7 +150,7 @@ def main(filename):
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
     print("Building model and compiling functions...")
-    params = np.load(filename)
+    params = np.load(filename)['arr_0']
     network = rebuild(params, input_var=input_var)
     # Output
     prediction = lasagne.layers.get_output(network, deterministic=False)
