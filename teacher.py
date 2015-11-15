@@ -161,7 +161,7 @@ def main(filename):
         inputs, __ = batch
         outputs.append(fn(inputs))
     outputs = np.hstack(outputs)
-    print outputs.shape
+    print(outputs.shape)
 
 
 if __name__ == '__main__':
