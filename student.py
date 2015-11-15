@@ -199,5 +199,5 @@ def main(targetFile, nEpochs=500, lr=1e-2):
 
 
 if __name__ == '__main__':
-    targetFile = './targets/tmean.npy'
+    targetFile = './targets/tpred.npy'
     main(targetFile, lr=5e-3)
