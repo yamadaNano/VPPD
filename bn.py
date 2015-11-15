@@ -67,7 +67,7 @@ def load_dataset():
 def build(input_var=None):
     inc = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                     input_var=input_var)
-    pl2D = dropout(pl2, 0.2)
+    pl2D = dropout(inc, 0.2)
     fc1 = fcLayer(pl2D, 800, 'fc1')
     fc1D = dropout(fc1, 0.5)
     fc2 = fcLayer(fc1D, 800, 'fc2')
@@ -118,7 +118,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(nEpochs=500):
+def main(lr=1e-2, nEpochs=500):
     # Load the dataset
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
@@ -128,7 +128,7 @@ def main(nEpochs=500):
     print("Building model and compiling functions...")
     network = build(input_var)
     # Loss
-    prediction = lasagne.layers.get_output(network)
+    prediction = lasagne.layers.get_output(network, deterministic=False)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
     loss = loss.mean()
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
@@ -140,7 +140,7 @@ def main(nEpochs=500):
     # Updates
     params = lasagne.layers.get_all_params(network, trainable=True)
     updates = lasagne.updates.nesterov_momentum(
-            loss, params, learning_rate=0.01, momentum=0.9)
+            loss, params, learning_rate=lr, momentum=0.9)
     # Flow graph compilations
     train_fn = theano.function([input_var, target_var], loss, updates=updates)
     val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
