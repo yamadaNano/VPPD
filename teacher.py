@@ -158,7 +158,7 @@ def main(filename):
     print("Starting training...")
     for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
         inputs, __ = batch
-        outputs = train_fn(inputs)
+        outputs = fn(inputs)
 
 
 if __name__ == '__main__':
