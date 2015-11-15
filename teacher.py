@@ -160,7 +160,7 @@ def main(filename):
     for batch in iterate_minibatches(X_train, y_train, 500, shuffle=False):
         inputs, __ = batch
         outputs.append(fn(inputs))
-    outputs = np.hstack(outputs)
+    outputs = np.vstack(outputs)
     print(outputs.shape)
 
 
