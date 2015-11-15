@@ -200,4 +200,4 @@ def main(targetFile, nEpochs=500, lr=1e-2):
 
 if __name__ == '__main__':
     targetFile = './targets/tmean.npy'
-    main(targetFile, lr=5e-2)
+    main(targetFile, lr=5e-3)
