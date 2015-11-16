@@ -73,7 +73,7 @@ def build(input_var=None):
     ln2 = RectifyNonlinearity(fc2)
     l_out = lasagne.layers.DenseLayer(ln2, num_units=10, name='l_out',
             nonlinearity=lasagne.nonlinearities.softmax)
-    return l_out
+    return (ln1, ln2, l_out)
 
 def fcLayer(incoming, num_units, name):
     '''Build and return a fully-connected layer'''
@@ -125,6 +125,15 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
             excerpt = slice(start_idx, start_idx + batchsize)
         yield inputs[excerpt], targets[excerpt]
 
+# ########################### Regularization magic ###########################
+def meanReg(Y):
+    '''Apply the regularisation to the mean'''
+    return T.mean(Y)
+
+def varReg(Y):
+    '''Apply regularisation to the variance'''
+    n = Y.shape[1]
+    return T.mean((T.dot(Y.T,Y) - T.eye(n))**2)
 
 # ############################## Main program ################################
 # Everything else will be handled in our main program now. We could pull out
@@ -141,9 +150,9 @@ def main(lr=1e-2, nEpochs=500):
     print("Building model and compiling functions...")
     network = build(input_var)
     # Loss
-    prediction = lasagne.layers.get_output(network, deterministic=False)
+    ln1, ln2, prediction = lasagne.layers.get_output(network, deterministic=False)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-    loss = loss.mean()
+    loss = loss.mean() + 1e-2*meanReg(ln2) + 1e-2*varReg(ln2)
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
                                                             target_var)
