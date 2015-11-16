@@ -105,7 +105,7 @@ class ScalingLayer(object):
         self.b = incoming.shape[1]
 
     def get_output_for(self, input, **kwargs):
-        return self.a*incoming + self.b
+        return self.a.dimshuffle('x',0)*incoming + self.b.dimshuffle('x',0)
 
 
 def cvLayer(incoming, nFilters, filterSize, name):
