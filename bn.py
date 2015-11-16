@@ -86,7 +86,7 @@ def linearLayer(incoming, num_units, name):
     '''Build and return a fully-connected layer'''
     fc = lasagne.layers.DenseLayer(incoming, num_units=num_units,
                                    nonlinearity=lasagne.nonlinearities.linear,
-                                   W=lasagne.init.GloroUniform(), name=name)
+                                   W=lasagne.init.GlorotUniform(), name=name)
     return fc
 
 class RectifyNonlinearity(lasagne.layers.Layer):
