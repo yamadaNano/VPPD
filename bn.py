@@ -150,7 +150,7 @@ def varReg(Y):
     return T.mean((T.dot(Y.T,Y) - T.eye(n))**2)
 
 def getLearningRate(lr, epoch, margin):
-    return (margin*lr)/np.maximum(epoch, margin)
+    return (margin*lr)/np.maximum(epoch, 6*margin)
 
 # ############################## Main program ################################
 # Everything else will be handled in our main program now. We could pull out
