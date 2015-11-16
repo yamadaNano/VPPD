@@ -99,11 +99,10 @@ class RectifyNonlinearity(lasagne.layers.Layer):
         return T.nnet.relu(input)
 
 class ScalingLayer(object):
-    def __init__(self, incoming, **kwargs):
+    def __init__(self, incoming, a=lasagne.init.Normal(0.01),
+                 b=lasagne.init.Normal(0.01), **kwargs):
         super(ScalingLayer, self).__init__(incoming, **kwargs)
         num_units = self.input_shape[1]
-        a=lasagne.init.Normal(0.01)
-        b=lasagne.init.Normal(0.01)
         self.a = self.add_param(a, (num_units,), name='a')
         self.b = self.add_param(b, (num_units,), name='b')
 
