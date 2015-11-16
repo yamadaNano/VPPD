@@ -150,9 +150,9 @@ def main(lr=1e-2, nEpochs=500):
     print("Building model and compiling functions...")
     network = build(input_var)
     # Loss
-    __, ln2, prediction = lasagne.layers.get_output(network, deterministic=False)
+    __, ln2, prediction = lasagne.layers.get_output(network, deterministic=True)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-    loss = loss.mean() + 1e-2*meanReg(ln2) + 1e-2*varReg(ln2)
+    loss = loss.mean() #+ 1e-2*meanReg(ln2) + 1e-2*varReg(ln2)
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
                                                             target_var)
