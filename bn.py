@@ -107,7 +107,7 @@ class ScalingLayer(lasagne.layers.Layer):
         self.b = self.add_param(b, (num_units,), name='b')
 
     def get_output_for(self, input, **kwargs):
-        return input #self.a.dimshuffle('x',0)*input + self.b.dimshuffle('x',0)
+        return self.a.dimshuffle('x',0)*input + self.b.dimshuffle('x',0)
 
 
 def cvLayer(incoming, nFilters, filterSize, name):
