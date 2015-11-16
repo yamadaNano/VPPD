@@ -234,4 +234,4 @@ def main(lr=1e-2, nEpochs=500):
 
 
 if __name__ == '__main__':
-    main(lr=1e-1)
+    main(lr=1e-2)
