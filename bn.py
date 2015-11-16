@@ -150,7 +150,7 @@ def varReg(Y):
     return T.mean((T.dot(Y.T,Y) - T.eye(n))**2)
 
 def getLearningRate(lr, epoch, margin):
-    return (margin*lr)/np.maximum(epoch, margin).astype(theano.config.floatX)
+    return (margin*lr)/np.maximum(epoch, margin)
 
 # ############################## Main program ################################
 # Everything else will be handled in our main program now. We could pull out
@@ -195,7 +195,7 @@ def main(lr=1e-2, nEpochs=500):
         train_err = 0
         train_batches = 0
         start_time = time.time()
-        lrAdaptive = getLearningRate(lr, epoch, margin)
+        lrAdaptive = getLearningRate(lr, epoch, margin).astype(theano.config.floatX)
         for batch in iterate_minibatches(X_train, y_train, 500, shuffle=True):
             inputs, targets = batch
             train_err += train_fn(inputs, targets, lrAdaptive)
