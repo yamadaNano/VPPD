@@ -101,8 +101,11 @@ class RectifyNonlinearity(lasagne.layers.Layer):
 class ScalingLayer(object):
     def __init__(self, incoming, **kwargs):
         super(ScalingLayer, self).__init__(incoming, **kwargs)
-        self.a = incoming.shape[1]
-        self.b = incoming.shape[1]
+        num_units = self.input_shape[1]
+        a=lasagne.init.Normal(0.01)
+        b=lasagne.init.Normal(0.01)
+        self.a = self.add_param(a, (num_units,), name='a')
+        self.b = self.add_param(b, (num_units,), name='b')
 
     def get_output_for(self, input, **kwargs):
         return self.a.dimshuffle('x',0)*incoming + self.b.dimshuffle('x',0)
