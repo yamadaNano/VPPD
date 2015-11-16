@@ -183,7 +183,7 @@ def main(lr=1e-2, nEpochs=500):
     # Updates
     params = lasagne.layers.get_all_params(network, trainable=True)
     updates = lasagne.updates.nesterov_momentum(
-            loss, params, learning_rate=lr, momentum=0.9)
+            loss, params, learning_rate=learning_rate, momentum=0.9)
     # Flow graph compilations
     train_fn = theano.function([input_var, target_var, learning_rate], loss, updates=updates)
     val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
