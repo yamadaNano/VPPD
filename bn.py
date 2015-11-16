@@ -67,12 +67,11 @@ def load_dataset():
 def build(input_var=None):
     inc = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                     input_var=input_var)
-    pl2D = dropout(inc, 0.2)
-    fc1 = fcLayer(pl2D, 800, 'fc1')
-    fc1D = dropout(fc1, 0.5)
-    fc2 = fcLayer(fc1D, 800, 'fc2')
-    fc2D = dropout(fc2, 0.5)
-    l_out = lasagne.layers.DenseLayer(fc2D, num_units=10, name='l_out',
+    fc1 = linearLayer(inc, 800, 'fc1')
+    ln1 = RectifyNonlinearity(fc1)
+    fc2 = linearLayer(ln1, 800, 'fc2')
+    ln2 = RectifyNonlinearity(fc2)
+    l_out = lasagne.layers.DenseLayer(ln2, num_units=10, name='l_out',
             nonlinearity=lasagne.nonlinearities.softmax)
     return l_out
 
@@ -82,6 +81,20 @@ def fcLayer(incoming, num_units, name):
                                    nonlinearity=lasagne.nonlinearities.rectify,
                                    W=lasagne.init.HeUniform(), name=name)
     return fc
+
+def linearLayer(incoming, num_units, name):
+    '''Build and return a fully-connected layer'''
+    fc = lasagne.layers.DenseLayer(incoming, num_units=num_units,
+                                   nonlinearity=lasagne.nonlinearities.linear,
+                                   W=lasagne.init.GloroUniform(), name=name)
+    return fc
+
+class RectifyNonlinearity(lasagne.layers.Layer):
+    def __init__(self, incoming, **kwargs):
+        super(RectifyNonlinearity, self).__init__(incoming, **kwargs)
+
+    def get_output_for(self, input, **kwargs):
+        return T.nnet.relu(input)
 
 def cvLayer(incoming, nFilters, filterSize, name):
     conv = lasagne.layers.Conv2DLayer(
