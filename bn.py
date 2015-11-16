@@ -102,12 +102,12 @@ class ScalingLayer(object):
     def __init__(self, incoming, a=lasagne.init.Normal(0.01),
                  b=lasagne.init.Normal(0.01), **kwargs):
         super(ScalingLayer, self).__init__(incoming, **kwargs)
-        #num_units = self.input_shape[1]
-        #self.a = self.add_param(a, (num_units,), name='a')
-        #self.b = self.add_param(b, (num_units,), name='b')
+        num_units = self.input_shape[1]
+        self.a = self.add_param(a, (num_units,), name='a')
+        self.b = self.add_param(b, (num_units,), name='b')
 
     def get_output_for(self, input, **kwargs):
-        return self.a.dimshuffle('x',0)*incoming + self.b.dimshuffle('x',0)
+        return self.a.dimshuffle('x',0)*input + self.b.dimshuffle('x',0)
 
 
 def cvLayer(incoming, nFilters, filterSize, name):
