@@ -100,7 +100,7 @@ class RectifyNonlinearity(lasagne.layers.Layer):
 
 class ScalingLayer(lasagne.layers.Layer):
     def __init__(self, incoming, a=lasagne.init.Constant(1.),
-                 b=lasagne.init.Constant(1.), **kwargs):
+                 b=lasagne.init.Constant(0.), **kwargs):
         super(ScalingLayer, self).__init__(incoming, **kwargs)
         num_units = self.input_shape[1]
         self.a = self.add_param(a, (num_units,), name='a')
@@ -234,4 +234,4 @@ def main(lr=1e-2, nEpochs=500):
 
 
 if __name__ == '__main__':
-    main(lr=1e-2)
+    main(lr=1e-1)
