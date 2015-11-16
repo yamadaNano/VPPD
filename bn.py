@@ -148,11 +148,12 @@ def main(lr=1e-2, nEpochs=500):
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
     print("Building model and compiling functions...")
-    network = build(input_var)
+    __, net2, network = build(input_var)
     # Loss
-    __, ln2, prediction = lasagne.layers.get_output(network, deterministic=True)
+    prediction = lasagne.layers.get_output(network, deterministic=True)
+    ln2 = lasagne.layers.get_output(net2, deterministic=True)
     loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-    loss = loss.mean() #+ 1e-2*meanReg(ln2) + 1e-2*varReg(ln2)
+    loss = loss.mean() + 1e-2*meanReg(ln2) + 1e-2*varReg(ln2)
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
                                                             target_var)
