@@ -96,6 +96,16 @@ class RectifyNonlinearity(lasagne.layers.Layer):
     def get_output_for(self, input, **kwargs):
         return T.nnet.relu(input)
 
+class ScalingLayer(object):
+    def __init__(self, incoming, **kwargs):
+        super(ScalingLayer, self).__init__(incoming, **kwargs)
+        self.a = incoming.shape[1]
+        self.b = incoming.shape[1]
+
+    def get_output_for(self, input, **kwargs):
+        return self.a*incoming + self.b
+
+
 def cvLayer(incoming, nFilters, filterSize, name):
     conv = lasagne.layers.Conv2DLayer(
         incoming, num_filters=nFilters, filter_size=filterSize, name=name,
