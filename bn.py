@@ -68,9 +68,11 @@ def build(input_var=None):
     inc = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
                                     input_var=input_var)
     fc1 = linearLayer(inc, 800, 'fc1')
-    ln1 = RectifyNonlinearity(fc1)
+    sc1 = ScalingLayer(fc1)
+    ln1 = RectifyNonlinearity(sc1)
     fc2 = linearLayer(ln1, 800, 'fc2')
-    ln2 = RectifyNonlinearity(fc2)
+    sc2 = ScalingLayer(fc2)
+    ln2 = RectifyNonlinearity(sc2)
     l_out = lasagne.layers.DenseLayer(ln2, num_units=10, name='l_out',
             nonlinearity=lasagne.nonlinearities.softmax)
     return (ln1, ln2, l_out)
