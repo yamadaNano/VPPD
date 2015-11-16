@@ -149,6 +149,9 @@ def varReg(Y):
     n = Y.shape[1]
     return T.mean((T.dot(Y.T,Y) - T.eye(n))**2)
 
+def getLearningRate(lr, epoch, margin):
+    return (margin*lr)/numpy.maximum(epoch, margin)
+
 # ############################## Main program ################################
 # Everything else will be handled in our main program now. We could pull out
 # more functions to better separate the code, but it wouldn't make it any
@@ -159,8 +162,10 @@ def main(lr=1e-2, nEpochs=500):
     print("Loading data...")
     X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
     # Prepare Theano variables for inputs and targets
+    margin = 25.
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
+    learning_rate = T.fscalar('learning_rate')
     print("Building model and compiling functions...")
     net1, net2, network = build(input_var)
     # Loss
@@ -180,7 +185,7 @@ def main(lr=1e-2, nEpochs=500):
     updates = lasagne.updates.nesterov_momentum(
             loss, params, learning_rate=lr, momentum=0.9)
     # Flow graph compilations
-    train_fn = theano.function([input_var, target_var], loss, updates=updates)
+    train_fn = theano.function([input_var, target_var, learning_rate], loss, updates=updates)
     val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
     # Finally, launch the training loop.
     print("Starting training...")
@@ -190,9 +195,10 @@ def main(lr=1e-2, nEpochs=500):
         train_err = 0
         train_batches = 0
         start_time = time.time()
+        lrAdaptive = getLearningRate(lr, epoch, margin)
         for batch in iterate_minibatches(X_train, y_train, 500, shuffle=True):
             inputs, targets = batch
-            train_err += train_fn(inputs, targets)
+            train_err += train_fn(inputs, targets, lrAdaptive)
             train_batches += 1
 
         # And a full pass over the validation data:
